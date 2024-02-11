@@ -54,13 +54,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev
-    
-      - name: Build
-        run: |
-          python -m build
-          python -m pip install .
-
-  
+      
       - name: Test
-        run: tox
+        run: tox -e ${{ matrix.python-version }}
 

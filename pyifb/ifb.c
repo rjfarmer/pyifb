@@ -42,7 +42,6 @@ PyInit_ifb(void)
     if (m == NULL) {
         goto except;
     }
-    printf("Did we go here?\n");
 
     if (PyType_Ready(&CFI_desc_type) < 0){
         goto except;
