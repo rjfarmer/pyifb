@@ -59,11 +59,20 @@ PyInit_ifb(void)
     if (PyModule_AddIntConstant(m, "CFI_VERSION", CFI_VERSION)) {
         goto except;
     }
+    if (PyModule_AddIntConstant(m, "CFI_attribute_pointer", CFI_attribute_pointer)) {
+        goto except;
+    }
+    if (PyModule_AddIntConstant(m, "CFI_attribute_allocatable", CFI_attribute_allocatable)) {
+        goto except;
+    }
+    if (PyModule_AddIntConstant(m, "CFI_attribute_other", CFI_attribute_other)) {
+        goto except;
+    }
+
 
     goto finally;
 
 except:
-    printf("Error happened\n");
     Py_XDECREF(&CFI_desc_type);
     Py_XDECREF(m);
     m = NULL;
