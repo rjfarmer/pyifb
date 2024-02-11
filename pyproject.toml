@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=61", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "pyifb"
+description = "Python bindings to ISO_Fortran_binding.h"
+requires-python = ">=3.7"
+
+authors = [
+    {name="Robert Farmer", email="robert.j.farmer37@gmail.com"}
+]
+
+dependencies =[
+    "numpy"
+]
+
+license = {text = "GPLv2"}
+readme = {file = "README.md", content-type = "text/markdown"}
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+]
+
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/rjfarmer/pyifb"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+]
+addopts = "-s"
+
+[tool.setuptools]
+packages = ["pyifb"]
+
+
+[tool.setuptools_scm]
+
+
