@@ -15,6 +15,16 @@
                      + __GNUC_PATCHLEVEL__)
 
 
+static PyMemberDef CFI_dim_members[] = {
+    {"lower_bound",Py_T_INT,offsetof(CFI_dim_object,dim) + offsetof(CFI_dim_t,lower_bound),0,
+        PyDoc_STR("The value is equal to the value of the lower bound for the dimension being described")},
+    {"extent",Py_T_INT,offsetof(CFI_dim_object,dim) + offsetof(CFI_dim_t,extent),0,
+        PyDoc_STR("The value is equal to the number of elements along the dimension being described, or the value -1 for the final dimension of an assumed-size array.")},
+    {"sm",Py_T_INT,offsetof(CFI_dim_object,dim) + offsetof(CFI_dim_t,sm),0,
+        PyDoc_STR("The value is equal to the memory stride for a dimension. The value is the distance in bytes between the beginnings of successive elements along the dimension being described.")},
+    {NULL}  /* Sentinel */
+};
+
 static PyTypeObject CFI_dim_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "CFI_dim_t",
