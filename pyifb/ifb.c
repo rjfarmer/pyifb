@@ -354,3 +354,52 @@ static int add_compiler_types(PyObject *m){
 
     return 0;
 }
+
+static int check_return(int error_code){
+
+    switch (error_code){
+        case CFI_SUCCESS:
+            // No error happened
+            return 0;
+        case CFI_ERROR_BASE_ADDR_NULL:
+            PyErr_SetString(PyExc_ValueError, "The base address member of a C descriptor is a null pointer in a context that requires a non-null pointer value.");
+            return 1;
+        case CFI_ERROR_BASE_ADDR_NOT_NULL:
+            PyErr_SetString(PyExc_ValueError, "The base address member of a C descriptor is not a null pointer in a context that requires a null pointer value.");
+            return 1;
+        case CFI_INVALID_RANK:
+            PyErr_SetString(PyExc_ValueError, "The value supplied for the element length member of a C descriptor is not valid.");
+            return 1;
+        case CFI_INVALID_TYPE:
+            PyErr_SetString(PyExc_ValueError, "The value supplied for the type member of a C descriptor is not valid.");
+            return 1;
+        case CFI_INVALID_ATTRIBUTE:
+            PyErr_SetString(PyExc_ValueError, "The value supplied for the attribute member of a C descriptor is not valid.");
+            return 1;
+        case CFI_INVALID_EXTENT:
+            PyErr_SetString(PyExc_ValueError, "The value supplied for the extent member of a CFI_dim_t structure is not valid.");
+            return 1;
+        case CFI_INVALID_DESCRIPTOR:
+            PyErr_SetString(PyExc_ValueError, "A general error condition for C descriptors.");
+            return 1;
+        case CFI_ERROR_MEM_ALLOCATION:
+            PyErr_SetString(PyExc_ValueError, "Memory allocation failed.");
+            return 1;
+        case CFI_ERROR_OUT_OF_BOUNDS:
+            PyErr_SetString(PyExc_ValueError, "A reference is out of bounds.");
+            return 1;
+        #ifdef __GNUC__
+        case CFI_FAILURE:
+            PyErr_SetString(PyExc_ValueError, "An error occurred");
+            return 1;
+        case CFI_INVALID_STRIDE:
+            PyErr_SetString(PyExc_ValueError, "Invalid stride");
+            return 1;
+        #endif      
+
+    }
+
+    PyErr_SetString(PyExc_ValueError, "Unknown error occurred.");
+
+    return 1;
+}

@@ -18,3 +18,4 @@ static int add_constants(PyObject *m);
 static int add_compiler_constants(PyObject *m);
 static int add_types(PyObject *m);
 static int add_compiler_types(PyObject *m);
+static int check_return(int error_code);
