@@ -11,3 +11,10 @@ typedef struct {
     PyObject_HEAD
     CFI_dim_t dim;
 } CFI_dim_object;
+
+
+static int set_compiler(PyObject *m);
+static int add_constants(PyObject *m);
+static int add_compiler_constants(PyObject *m);
+static int add_types(PyObject *m);
+static int add_compiler_types(PyObject *m);
