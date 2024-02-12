@@ -85,3 +85,22 @@ class TestMacros:
         assert p.CFI_type_cptr == 7
         assert p.CFI_type_cfunptr == 8
         assert p.CFI_type_other == -1
+
+    def test_cfi_dim(self):
+        x = p.CFI_dim_t()
+        assert x.sm == 0
+        assert x.lower_bound == 0
+        assert x.extent == 0
+
+        with pytest.raises(TypeError) as e:
+            x.extent = 'a'
+
+        with pytest.raises(TypeError) as e:
+            x.sm = 'a'
+
+        with pytest.raises(TypeError) as e:
+            x.lower_bound = 'a'
+
+        x.lower_bound  = 1
+        x.sm = 1
+        x.extent = 1

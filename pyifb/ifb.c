@@ -2,6 +2,7 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <stddef.h>
 #include "ISO_Fortran_binding.h"
 
 #include "ifb.h"
@@ -14,11 +15,24 @@
                      + __GNUC_PATCHLEVEL__)
 
 
-static PyTypeObject CFI_desc_type = {
+static PyTypeObject CFI_dim_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
-    .tp_name = "CFI_desc_t",
-    .tp_doc = PyDoc_STR("CFI_desc_t holds the dimensions of an object"),
+    .tp_name = "CFI_dim_t",
+    .tp_doc = PyDoc_STR("CFI_dim_t holds the dimensions of an object"),
     .tp_basicsize = sizeof(CFI_dim_object),
+    .tp_itemsize = 0,
+    .tp_flags = Py_TPFLAGS_DEFAULT,
+    .tp_new = PyType_GenericNew,
+    .tp_members = CFI_dim_members,
+    // .tp_setattro = CFI_dim_setattro,
+    // .tp_getattro = CFI_dim_getattro,
+};
+
+static PyTypeObject CFI_cdesc_type = {
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "CFI_cdesc_t",
+    .tp_doc = PyDoc_STR("CFI_cdesc_t holds the C descriptor"),
+    .tp_basicsize = sizeof(CFI_cdesc_object),
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = PyType_GenericNew,
@@ -43,14 +57,25 @@ PyInit_ifb(void)
         goto except;
     }
 
-    if (PyType_Ready(&CFI_desc_type) < 0){
+    if (PyType_Ready(&CFI_dim_type) < 0){
         goto except;
     }
         
-    Py_INCREF(&CFI_desc_type);
-    if (PyModule_AddObject(m, "CFI_desc_t", (PyObject *) &CFI_desc_type) < 0) {
+    Py_INCREF(&CFI_dim_type);
+    if (PyModule_AddObject(m, "CFI_dim_t", (PyObject *) &CFI_dim_type) < 0) {
         goto except;
     }
+
+    if (PyType_Ready(&CFI_cdesc_type) < 0){
+        goto except;
+    }
+        
+    Py_INCREF(&CFI_cdesc_type);
+    if (PyModule_AddObject(m, "CFI_cdesc_t", (PyObject *) &CFI_cdesc_type) < 0) {
+        goto except;
+    }
+
+
 
     if(add_constants(m)){
         goto except;
@@ -75,7 +100,8 @@ PyInit_ifb(void)
     goto finally;
 
 except:
-    Py_XDECREF(&CFI_desc_type);
+    Py_XDECREF(&CFI_dim_type);
+    Py_XDECREF(&CFI_cdesc_type);
     Py_XDECREF(m);
     m = NULL;
 finally:
@@ -403,3 +429,37 @@ static int check_return(int error_code){
 
     return 1;
 }
+
+// CFI_dim methods and members
+
+
+// static PyObject* CFI_dim_getattro(CFI_dim_object *self, PyObject *attr){
+
+//     char *str = NULL;
+//     PyObject *out = NULL;
+
+//     str = PyUnicode_AsUTF8String(attr);
+//     if(str == NULL){
+//         return NULL;
+//     }
+
+//     Py_INCREF(out);
+//     if(strcmp(str,"lower_bound")==0){
+//         out = PyLong_FromLong(self->dim.lower_bound);
+//     }
+//     else if(strcmp(str,"extent")==0){
+//         out = PyLong_FromLong(self->dim.extent);
+//     }
+//     else if(strcmp(str,"sm")==0){
+//         out = PyLong_FromLong(self->dim.sm);
+//     }
+
+
+//     return out;
+
+// }
+
+
+// static int CFI_dim_setattro(CFI_dim_object *self, PyObject *attr, PyObject *value){
+    
+// }
