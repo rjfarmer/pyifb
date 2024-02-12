@@ -35,6 +35,9 @@ class TestMacros:
 
     def test_compiler(self):
         assert p.IFB_COMPILER != "UNKNOWN"
+        
+        if p.IFB_COMPILER == 'GCC':
+            assert len(p.IFB_COMPILER_VERSION)
 
     def test_types(self):
         assert p.CFI_type_signed_char > 0

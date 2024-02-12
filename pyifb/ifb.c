@@ -159,12 +159,21 @@ static int set_compiler(PyObject *m){
     if (PyModule_AddStringConstant(m, "IFB_COMPILER", "GCC")) {
         return 1;
     }  
+    if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
+        return 1;
+    }  
     #elif __INTEL_COMPILER
     if (PyModule_AddStringConstant(m, "IFB_COMPILER", "ICC")) {
         return 1;
-    }      
+    }   
+    if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
+        return 1;
+    }     
     #else
     if (PyModule_AddStringConstant(m, "IFB_COMPILER", "UNKNOWN")) {
+        return 1;
+    }   
+    if (PyModule_AddIntConstant(m, "IFB_COMPILER_VERSION", -1)) {
         return 1;
     }      
     #endif
