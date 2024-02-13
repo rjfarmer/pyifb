@@ -24,6 +24,7 @@ jobs:
 
       - name: Get iso_fortran_binding.h
         run: |
+          sudo apt-get update
           sudo apt-get install libgfortran-dev gfortran
       
       - name: Test
