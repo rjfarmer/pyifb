@@ -3,33 +3,11 @@ on: [push, pull_request]
 
 jobs:
   linux_ci:
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-22.04
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]    
         python-version: ['3.7', '3.8', '3.9', '3.10', '3.11', '3.12']    
-        toolchain:
-          - {compiler: gcc, version: 8}
-          - {compiler: gcc, version: 9}
-          - {compiler: gcc, version: 10}
-          - {compiler: gcc, version: 11}
-          - {compiler: gcc, version: 12}
-          - {compiler: gcc, version: 13}
-        exclude:
-          - os: ubuntu-20.04
-            toolchain: {compiler: gcc, version: 9}
-          - os: ubuntu-20.04
-            toolchain: {compiler: gcc, version: 10}
-          - os: ubuntu-20.04
-            toolchain: {compiler: gcc, version: 11}
-          - os: ubuntu-20.04
-            toolchain: {compiler: gcc, version: 12}
-          - os: ubuntu-20.04
-            toolchain: {compiler: gcc, version: 13}
-          - os: ubuntu-22.04
-            toolchain: {compiler: gcc, version: 8}
-
 
     steps:
       - uses: actions/checkout@v4
@@ -44,20 +22,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build wheel pytest tox
 
-      - uses: fortran-lang/setup-fortran@v1
-        id: setup-fortran
-        with:
-          compiler: ${{ matrix.toolchain.compiler }}
-          version: ${{ matrix.toolchain.version }}
-
       - name: Get iso_fortran_binding.h
         run: |
-          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev gcc-${{ matrix.toolchain.version }}
+          sudo apt-get install libgfortran-dev gfortran
       
       - name: Test
-        env: 
-          CC: /usr/bin/gcc-${{ matrix.toolchain.version }}
-          CPPFLAGS: -I/usr/lib/gcc/x86_64-linux-gnu/${{ matrix.toolchain.version }}/include
-          OPT: ""
         run: tox -e ${{ matrix.python-version }}
 
