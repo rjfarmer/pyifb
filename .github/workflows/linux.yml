@@ -57,5 +57,6 @@ jobs:
       - name: Test
         env: 
           CC: /usr/bin/gcc-${{ matrix.toolchain.version }}
+          CPPFLAGS: -I/usr/lib/gcc/x86_64-linux-gnu/${{ matrix.toolchain.version }}/include
         run: tox -e ${{ matrix.python-version }}
 
