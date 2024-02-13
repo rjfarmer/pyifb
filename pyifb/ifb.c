@@ -3,6 +3,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 #include <stddef.h>
+#include "structmember.h"
 #include "ISO_Fortran_binding.h"
 
 #include "ifb.h"
@@ -14,13 +15,24 @@
                      + __GNUC_MINOR__ * 100 \
                      + __GNUC_PATCHLEVEL__)
 
+#define PY_MAJOR  3
+#define PY_STRUCT_SWITCH  12
+
+#if PY_MAJOR_VERSION == PY_MAJOR
+    #if PY_MINOR_VERSION < PY_STRUCT_SWITCH
+        #define Py_T_INT T_INT
+    #endif
+#endif
+
+
+
 
 static PyMemberDef CFI_dim_members[] = {
-    {"lower_bound",Py_T_INT,offsetof(CFI_dim_object,dim) + offsetof(CFI_dim_t,lower_bound),0,
+    {"lower_bound",Py_T_INT, offsetof(CFI_dim_object,dim.lower_bound),0,
         PyDoc_STR("The value is equal to the value of the lower bound for the dimension being described")},
-    {"extent",Py_T_INT,offsetof(CFI_dim_object,dim) + offsetof(CFI_dim_t,extent),0,
+    {"extent",Py_T_INT,offsetof(CFI_dim_object,dim.extent),0,
         PyDoc_STR("The value is equal to the number of elements along the dimension being described, or the value -1 for the final dimension of an assumed-size array.")},
-    {"sm",Py_T_INT,offsetof(CFI_dim_object,dim) + offsetof(CFI_dim_t,sm),0,
+    {"sm",Py_T_INT,offsetof(CFI_dim_object,dim.sm),0,
         PyDoc_STR("The value is equal to the memory stride for a dimension. The value is the distance in bytes between the beginnings of successive elements along the dimension being described.")},
     {NULL}  /* Sentinel */
 };

@@ -2,7 +2,8 @@
 
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
-
+#include <stddef.h>
+#include "structmember.h"
 #include "ISO_Fortran_binding.h"
 
 #pragma once
