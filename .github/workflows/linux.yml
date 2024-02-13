@@ -52,8 +52,10 @@ jobs:
 
       - name: Get iso_fortran_binding.h
         run: |
-          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev gcc-${{ matrix.toolchain.version }}
+          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev gcc-${{ matrix.toolchain.version }} gcc-${{ matrix.toolchain.version }}-dev
       
       - name: Test
-        run: CC=/usr/bin/gcc-${{ matrix.toolchain.version }} tox -e ${{ matrix.python-version }}
+        env: 
+          CC: /usr/bin/gcc-${{ matrix.toolchain.version }}
+        run: tox -e ${{ matrix.python-version }}
 
