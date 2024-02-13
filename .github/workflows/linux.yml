@@ -44,6 +44,11 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build wheel pytest tox
 
+      - name: Remove other gcc's
+        run: |
+          sudo apt-get update
+          sudo apt-get remove gcc* 
+
       - uses: fortran-lang/setup-fortran@v1
         id: setup-fortran
         with:
@@ -52,8 +57,7 @@ jobs:
 
       - name: Get iso_fortran_binding.h
         run: |
-          sudo apt-get update
-          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev
+          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev gcc-${{ matrix.toolchain.version }}
       
       - name: Test
         run: tox -e ${{ matrix.python-version }}
