@@ -52,7 +52,7 @@ jobs:
 
       - name: Get iso_fortran_binding.h
         run: |
-          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev gcc-${{ matrix.toolchain.version }} gcc-${{ matrix.toolchain.version }}-dev
+          sudo apt-get install libgfortran-${{ matrix.toolchain.version }}-dev gcc-${{ matrix.toolchain.version }}
       
       - name: Test
         env: 
