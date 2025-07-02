@@ -29,6 +29,22 @@ static PyTypeObject CFI_dim_type = {
     // .tp_getattro = CFI_dim_getattro,
 };
 
+
+
+static PyMemberDef CFI_cdesc_members[] = {
+    {"base_addr",Py_T_INT, offsetof(CFI_cdesc_object,dv.base_addr),0,
+        PyDoc_STR("")},
+    {"elem_len",Py_T_INT,offsetof(CFI_cdesc_object,dv.elem_len),0,
+        PyDoc_STR("If the object is scalar, the value is the storage size in bytes of the object; otherwise, the value is the storage size in bytes of an element of the object")},
+    {"rank",Py_T_INT,offsetof(CFI_cdesc_object,dv.rank),0,
+        PyDoc_STR("The value is equal to the number of dimensions of the Fortran object being described. If the object is a scalar, the value is zero.")},
+    {"type",Py_T_INT,offsetof(CFI_cdesc_object,dv.type),0,
+        PyDoc_STR("The value is equal to the specifier for the type of the object.")},
+     {"attribute",Py_T_INT,offsetof(CFI_cdesc_object,dv.attribute),0,
+        PyDoc_STR("The value is equal to the value of an attribute code that indicates whether the object described is allocatable, a data pointer, or a nonallocatable nonpointer data object.")},
+        {NULL}  /* Sentinel */
+};
+
 static PyTypeObject CFI_cdesc_type = {
     PyVarObject_HEAD_INIT(NULL, 0)
     .tp_name = "CFI_cdesc_t",
@@ -37,6 +53,7 @@ static PyTypeObject CFI_cdesc_type = {
     .tp_itemsize = 0,
     .tp_flags = Py_TPFLAGS_DEFAULT,
     .tp_new = PyType_GenericNew,
+    .tp_members = CFI_cdesc_members,
 };
 
 
