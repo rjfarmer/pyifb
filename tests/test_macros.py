@@ -30,13 +30,13 @@ class TestMacros:
         assert p.CFI_INVALID_TYPE != 0
         assert p.CFI_INVALID_ATTRIBUTE != 0
         assert p.CFI_INVALID_DESCRIPTOR != 0
-        assert p.CFI_ERROR_MEM_ALLOCATION != 0 
+        assert p.CFI_ERROR_MEM_ALLOCATION != 0
         assert p.CFI_ERROR_OUT_OF_BOUNDS != 0
 
     def test_compiler(self):
         assert p.IFB_COMPILER != "UNKNOWN"
-        
-        if p.IFB_COMPILER == 'GCC':
+
+        if p.IFB_COMPILER == "GCC":
             assert len(p.IFB_COMPILER_VERSION)
 
     def test_types(self):
@@ -72,7 +72,7 @@ class TestMacros:
         assert p.CFI_type_cptr > 0
         assert p.CFI_type_struct > 0
 
-    @pytest.mark.skipif(p.IFB_COMPILER != 'GCC',reason='Only for GCC')
+    @pytest.mark.skipif(p.IFB_COMPILER != "GCC", reason="Only for GCC")
     def test_gcc_types(self):
         assert p.CFI_type_mask == 0xFF
         assert p.CFI_type_kind_shift == 8
@@ -93,14 +93,14 @@ class TestMacros:
         assert x.extent == 0
 
         with pytest.raises(TypeError) as e:
-            x.extent = 'a'
+            x.extent = "a"
 
         with pytest.raises(TypeError) as e:
-            x.sm = 'a'
+            x.sm = "a"
 
         with pytest.raises(TypeError) as e:
-            x.lower_bound = 'a'
+            x.lower_bound = "a"
 
-        x.lower_bound  = 1
+        x.lower_bound = 1
         x.sm = 1
         x.extent = 1
