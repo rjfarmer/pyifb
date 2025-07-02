@@ -30,6 +30,9 @@ dependencies = [
 
 dynamic = ["version"]
 
+[tool.setuptools]
+packages = ["pyifb"]
+
 
 [project.optional-dependencies]
 test = ['pytest','pytest-xdist']
