@@ -1,12 +1,31 @@
 //SPDX-License-Identifier: GPL-2.0+
 
+#pragma once
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
+#include <structmember.h> // Removed in 3.12
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdbool.h>
 #include <stddef.h>
-#include "structmember.h"
+
 #include "ISO_Fortran_binding.h"
 
-#pragma once
+
+#define GCC_VERSION (__GNUC__ * 10000 \
+                     + __GNUC_MINOR__ * 100 \
+                     + __GNUC_PATCHLEVEL__)
+
+#define PY_MAJOR  3
+#define PY_STRUCT_SWITCH  12
+
+#if PY_MAJOR_VERSION == PY_MAJOR
+    #if PY_MINOR_VERSION < PY_STRUCT_SWITCH
+        #define Py_T_INT T_INT
+    #endif
+#endif
+
 
 typedef struct {
     PyObject_HEAD

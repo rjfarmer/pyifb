@@ -1,30 +1,9 @@
 // SPDX-License-Identifier: GPL-2.0+
 
-#define PY_SSIZE_T_CLEAN
-#include <Python.h>
-#include <stddef.h>
-#include "structmember.h"
-#include "ISO_Fortran_binding.h"
-
 #include "ifb.h"
 
 // https://github.com/gcc-mirror/gcc/blob/master/libgfortran/ISO_Fortran_binding.h
 // https://wg5-fortran.org/N1901-N1950/N1942.pdf
-
-#define GCC_VERSION (__GNUC__ * 10000 \
-                     + __GNUC_MINOR__ * 100 \
-                     + __GNUC_PATCHLEVEL__)
-
-#define PY_MAJOR  3
-#define PY_STRUCT_SWITCH  12
-
-#if PY_MAJOR_VERSION == PY_MAJOR
-    #if PY_MINOR_VERSION < PY_STRUCT_SWITCH
-        #define Py_T_INT T_INT
-    #endif
-#endif
-
-
 
 
 static PyMemberDef CFI_dim_members[] = {
