@@ -1,4 +1,5 @@
 include README.md
 include COPYING.txt
-include pyproject.toml setup.py
+include setup.py
+include pyproject.toml
 recursive-include pyifb *.c *.h

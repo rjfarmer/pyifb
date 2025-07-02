@@ -1,29 +1,24 @@
-name: Linux CI
+name: Linux ARM
 on: [push, pull_request]
 permissions: {}
 
 jobs:
-  linux_ci:
+  linux_arm:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: true
       matrix:
-        os: [ubuntu-latest]    
-        python-version: [ '3.10', '3.11', '3.12', '3.13']    
-        toolchain:
-          - {compiler: gcc, version: 12}
-          - {compiler: gcc, version: 13}
-          - {compiler: gcc, version: 14}
-
+        os: [ ubuntu-24.04-arm]    
 
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - name: Set up Python ${{ matrix.python-version }}
+
+      - name: Set up Python 
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.x'
           cache: 'pip'
 
       - name: Install dependencies
@@ -32,12 +27,9 @@ jobs:
           python -m pip install build wheel pip-tools
           pip-compile -o requirements.txt --extra test --strip-extras
           python -m pip install -r requirements.txt
+          sudo apt-get update
+          sudo apt-get install -y gcc gfortran libopenblas-dev
 
-      - uses: fortran-lang/setup-fortran@v1
-        id: setup-fortran
-        with:
-          compiler: ${{ matrix.toolchain.compiler }}
-          version: ${{ matrix.toolchain.version }}
     
       - name: Build
         run: |
@@ -49,4 +41,5 @@ jobs:
         # Don't use python -m pytest as that screws up the module loading
         run: |
           pytest -v
+
 

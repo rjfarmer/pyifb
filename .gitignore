@@ -12,6 +12,8 @@ __pycache__/
 *.original
 *.extract
 
+N1942.pdf
+
 # Distribution / packaging
 .Python
 env/
