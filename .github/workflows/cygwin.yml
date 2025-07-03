@@ -19,8 +19,8 @@ jobs:
             platform: x86_64
             install-dir: 'C:\tools\cygwin'
             packages: >-
-              python39-devel python39-pip python-pip-wheel python-setuptools-wheel
-              liblapack-devel liblapack0 gcc-fortran git dash python39-numpy automake make
+              python311-devel python311-pip python-pip-wheel python-setuptools-wheel
+              liblapack-devel liblapack0 gcc gcc-fortran git dash
 
         - name: pip cache
           uses: actions/cache@v4
@@ -42,19 +42,19 @@ jobs:
         - name: Verify python version
           # Make sure it's the Cygwin one, not a Windows one
           run: |
-            dash -c "which python3.9; /usr/bin/python3.9 --version -V"    
+            dash -c "which python3.11; /usr/bin/python3.11 --version -V"    
         - name: Install dependencies
           shell: "C:\\tools\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
           run: |
-            /usr/bin/python3.9 -m pip install --upgrade pip
-            /usr/bin/python3.9 -m pip install build wheel pip-tools
+            /usr/bin/python3.11 -m pip install --upgrade pip
+            /usr/bin/python3.11 -m pip install build wheel pip-tools
             /usr/local/bin/pip-compile -o requirements.txt --extra test --strip-extras
-            /usr/bin/python3.9 -m pip install -r requirements.txt
+            /usr/bin/python3.11 -m pip install -r requirements.txt
         - name: Install 
           shell: "C:\\tools\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
           run: |
-            /usr/bin/python3.9 -m pip install -e .
+            /usr/bin/python3.11 -m pip install -e .
         - name: Run tests
           shell: "C:\\tools\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
           run: |
-              /usr/bin/python3.9 -m pytest -v
+              /usr/bin/python3.11 -m pytest -v
