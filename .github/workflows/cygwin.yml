@@ -48,7 +48,7 @@ jobs:
           run: |
             /usr/bin/python3.9 -m pip install --upgrade pip
             /usr/bin/python3.9 -m pip install build wheel pip-tools
-            /usr/bin/python3.9 -m pip-compile -o requirements.txt --extra test --strip-extras
+            /usr/local/bin/pip-compile -o requirements.txt --extra test --strip-extras
             /usr/bin/python3.9 -m pip install -r requirements.txt
         - name: Install 
           shell: "C:\\tools\\cygwin\\bin\\bash.exe -o igncr -eo pipefail {0}"
