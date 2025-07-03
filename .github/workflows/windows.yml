@@ -40,7 +40,14 @@ jobs:
           version: ${{ matrix.toolchain.version }}
     
       - name: Build
-        run: python -m pip install -e .
+        shell: bash
+        env:
+          CC: ${{ steps.setup-fortran.outputs.CC }}
+          FC: ${{ steps.setup-fortran.outputs.FC }}
+        run: |
+          echo '[build]' > setup.cfg
+          echo 'compiler = ${CC}' >> setup.cfg 
+          python -m pip install -e .
 
   
       - name: Test
