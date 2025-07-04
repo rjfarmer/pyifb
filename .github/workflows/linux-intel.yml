@@ -3,13 +3,13 @@ on: [push, pull_request]
 permissions: {}
 
 jobs:
-  linux_ci:
+  linux_intel:
     runs-on: ${{ matrix.os }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         os: [ubuntu-latest]    
-        python-version: [ '3.10', '3.11', '3.12', '3.13']    
+        python-version: [ '3.13']    
         toolchain:
           - {compiler: intel, version: 2025.0}
           - {compiler: intel, version: 2024.0}
@@ -40,9 +40,8 @@ jobs:
           version: ${{ matrix.toolchain.version }}
     
       - name: Build
-        env:
-          CC = ${{ matrix.toolchain.compiler }}
         run: |
+          export CC=${{ matrix.toolchain.compiler }}
           python -m build
           python -m pip install dist/pyifb*.whl
 
