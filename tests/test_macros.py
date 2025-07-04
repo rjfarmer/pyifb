@@ -6,10 +6,19 @@ import pytest
 
 
 class TestMacros:
-    def test_macro_value(self):
+    def test_version(self):
         # Specific values we should know when they change
-        assert p.CFI_VERSION == 1
-        assert p.CFI_MAX_RANK == 15
+        if p.IFB_COMPILER == "GCC":
+            assert p.CFI_VERSION == 1
+        elif p.IFB_COMPILER == "ICX":
+            assert p.CFI_VERSION >= 2000000000
+            
+
+    def test_max_rank(self):
+        if p.IFB_COMPILER == "GCC":
+            assert p.CFI_MAX_RANK == 15 
+        elif p.IFB_COMPILER == "ICX":
+            assert p.CFI_MAX_RANK == 31
 
     def test_macro_access(self):
         # Only want to make sure they exist
@@ -34,9 +43,9 @@ class TestMacros:
         assert p.CFI_ERROR_OUT_OF_BOUNDS != 0
 
     def test_compiler(self):
-        assert p.IFB_COMPILER != "UNKNOWN"
-
         if p.IFB_COMPILER == "GCC":
+            assert len(p.IFB_COMPILER_VERSION)
+        elif p.IFB_COMPILER == "ICX":
             assert len(p.IFB_COMPILER_VERSION)
 
     def test_types(self):

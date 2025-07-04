@@ -1,4 +1,4 @@
-name: Linux CI
+name: Linux Intel
 on: [push, pull_request]
 permissions: {}
 
@@ -11,9 +11,9 @@ jobs:
         os: [ubuntu-latest]    
         python-version: [ '3.10', '3.11', '3.12', '3.13']    
         toolchain:
-          - {compiler: gcc, version: 12}
-          - {compiler: gcc, version: 13}
-          - {compiler: gcc, version: 14}
+          - {compiler: intel, version: 2025.0}
+          - {compiler: intel, version: 2024.0}
+          - {compiler: intel, version: 2023.0}
 
 
     steps:
@@ -40,6 +40,8 @@ jobs:
           version: ${{ matrix.toolchain.version }}
     
       - name: Build
+        env:
+          CC = ${{ matrix.toolchain.compiler }}
         run: |
           python -m build
           python -m pip install dist/pyifb*.whl

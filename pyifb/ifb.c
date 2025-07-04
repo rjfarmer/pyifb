@@ -183,7 +183,7 @@ static int add_constants(PyObject *m){
 static int add_compiler_constants(PyObject *m){
 
     // GCC specifics
-    #ifdef __GNUC__ 
+    #if REALLY_GCC
     if (PyModule_AddIntMacro(m, CFI_FAILURE)) {
         return 1;
     }   
@@ -199,20 +199,20 @@ static int add_compiler_constants(PyObject *m){
 
 static int set_compiler(PyObject *m){
 
-    #ifdef __GNUC__
+    #if REALLY_GCC
     if (PyModule_AddStringConstant(m, "IFB_COMPILER", "GCC")) {
         return 1;
     }  
     if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
         return 1;
-    }  
-    #elif __INTEL_COMPILER
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER", "ICC")) {
+    } 
+    #elif REALLY_ICX
+    if (PyModule_AddStringConstant(m, "IFB_COMPILER", "ICX")) {
         return 1;
     }   
     if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
         return 1;
-    }     
+    }          
     #else
     if (PyModule_AddStringConstant(m, "IFB_COMPILER", "UNKNOWN")) {
         return 1;
@@ -360,7 +360,7 @@ static int add_types(PyObject *m){
 
 static int add_compiler_types(PyObject *m){
 
-    #ifdef __GNUC__
+    // GCC specifics
     if (PyModule_AddIntMacro(m, CFI_type_mask)) {
         return 1;
     }
@@ -391,9 +391,6 @@ static int add_compiler_types(PyObject *m){
     if (PyModule_AddIntMacro(m, CFI_type_float128_Complex)) {
         return 1;
     }
-
-
-    #endif
 
 
     return 0;
@@ -432,7 +429,7 @@ static int check_return(int error_code){
         case CFI_ERROR_OUT_OF_BOUNDS:
             PyErr_SetString(PyExc_ValueError, "A reference is out of bounds.");
             return 1;
-        #ifdef __GNUC__
+        #if REALLY_GCC
         case CFI_FAILURE:
             PyErr_SetString(PyExc_ValueError, "An error occurred");
             return 1;
