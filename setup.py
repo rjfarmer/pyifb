@@ -9,6 +9,7 @@ setup(
             sources=[
                 "pyifb/ifb.c",
             ],
+            py_limited_api=True,
         )
     ],
 )
