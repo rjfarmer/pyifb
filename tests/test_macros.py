@@ -12,11 +12,10 @@ class TestMacros:
             assert p.CFI_VERSION == 1
         elif p.IFB_COMPILER == "ICX":
             assert p.CFI_VERSION >= 2000000000
-            
 
     def test_max_rank(self):
         if p.IFB_COMPILER == "GCC":
-            assert p.CFI_MAX_RANK == 15 
+            assert p.CFI_MAX_RANK == 15
         elif p.IFB_COMPILER == "ICX":
             assert p.CFI_MAX_RANK == 31
 
