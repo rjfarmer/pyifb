@@ -4,6 +4,7 @@
 #define PY_SSIZE_T_CLEAN
 #define Py_LIMITED_API 0x030A0000
 #include <Python.h>
+
 #if PY_MAJOR_VERSION == 3
     #if PY_MINOR_VERSION < 12
 #include <structmember.h> // Removed in 3.12
@@ -49,6 +50,12 @@
 #if PY_MAJOR_VERSION == 3
     #if PY_MINOR_VERSION < 12
         #define Py_T_INT T_INT
+        #define Py_T_LONG T_LONG
+        #define Py_T_PYSSIZET T_PYSSIZET
+        #define Py_T_SHORT T_SHORT
+    #endif
+    #if PY_MINOR_VERSION < 11
+        #define Py_READONLY READONLY
     #endif
 #endif
 
@@ -60,11 +67,20 @@
 #else
 #define PyCFI_index_t Py_T_INT
 #endif
+
+// int16
+#define PyCFI_type_t Py_T_SHORT
+
 #else
 // Non gcc compilier will need thier own fix for 32 bit machines
 // (if we care)
 #define PyCFI_index_t Py_T_LONG
 #endif
+
+#define xstr(a) str(a)
+#define str(a) #a
+
+#define STR_CFI_MAX_RANK xstr(CFI_MAX_RANK)
 
 
 static int set_compiler(PyObject *m);
@@ -79,9 +95,9 @@ typedef struct {
     CFI_dim_t dim;
 } CFI_dim_object;
 
-// typedef struct {
-//     PyObject_HEAD
-//     CFI_cdesc_t dv;
-// } CFI_cdesc_object;
+typedef struct {
+    PyObject_HEAD
+    CFI_cdesc_t dv;
+} CFI_cdesc_object;
 
 
