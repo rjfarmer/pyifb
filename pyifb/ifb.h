@@ -2,9 +2,13 @@
 
 #pragma once
 #define PY_SSIZE_T_CLEAN
-#define Py_LIMITED_API 3
+#define Py_LIMITED_API 0x030A0000
 #include <Python.h>
+#if PY_MAJOR_VERSION == 3
+    #if PY_MINOR_VERSION < 12
 #include <structmember.h> // Removed in 3.12
+    #endif
+#endif
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -42,10 +46,42 @@
 #define CFI_type_float128_Complex -1
 #endif
 
+#if PY_MAJOR_VERSION == 3
+    #if PY_MINOR_VERSION < 12
+        #define Py_T_INT T_INT
+    #endif
+#endif
+
+// Can't use sizeof here but we know that CFI_index_t is
+// type ptrdiff_t
+#if REALLY_GCC
+#if __SIZEOF_PTRDIFF_T__ == 8
+#define PyCFI_index_t Py_T_LONG
+#else
+#define PyCFI_index_t Py_T_INT
+#endif
+#else
+// Non gcc compilier will need thier own fix for 32 bit machines
+// (if we care)
+#define PyCFI_index_t Py_T_LONG
+#endif
+
 
 static int set_compiler(PyObject *m);
 static int add_constants(PyObject *m);
 static int add_compiler_constants(PyObject *m);
 static int add_types(PyObject *m);
 static int add_compiler_types(PyObject *m);
+static int add_pytypes(PyObject *m);
+
+typedef struct {
+    PyObject_HEAD
+    CFI_dim_t dim;
+} CFI_dim_object;
+
+// typedef struct {
+//     PyObject_HEAD
+//     CFI_cdesc_t dv;
+// } CFI_cdesc_object;
+
 

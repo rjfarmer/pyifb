@@ -1,6 +1,5 @@
 from setuptools import setup, Extension
-import pathlib
-import functools
+
 
 setup(
     ext_modules=[
@@ -9,6 +8,7 @@ setup(
             sources=[
                 "pyifb/ifb.c",
             ],
+            libraries=["gfortran"],
             py_limited_api=True,
         )
     ],
