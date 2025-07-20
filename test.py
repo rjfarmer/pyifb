@@ -1,5 +1,5 @@
 import pyifb as p
 
-c = p.CFI_dim_t
+c = p.CFI_cdesc_t(5)
 
-print(c.sm)
+print(c.base_addr)

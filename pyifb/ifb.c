@@ -134,34 +134,39 @@ static void PyCFI_cdesc_dealloc(CFI_cdesc_object *self) {
 
 static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_UNUSED){
 
-    int rank;
+    int rank=0;
     CFI_cdesc_object *self;
 
-    if (!PyArg_ParseTuple(args, "i:", &rank)){
-        PyErr_SetString(PyExc_ValueError, "Failed to parse arguments");
-        return NULL;
+    if (!PyArg_ParseTuple(args, "|i:", &rank)){
+        if(PyErr_Occurred()){
+            return NULL;
+        }
     }
 
     if(rank>CFI_MAX_RANK){
-        PyErr_SetString(PyExc_ValueError, "Rank must be less than" STR_CFI_MAX_RANK "");
+        PyErr_SetString(PyExc_ValueError, "Rank must be less than " STR_CFI_MAX_RANK "");
+        return NULL;
     }
 
     if(rank<0){
         PyErr_SetString(PyExc_ValueError, "Rank must be greater than zero");
+        return NULL;
     }
 
-    printf("Rank of %d\n",rank);
+    printf("Rank of %d %d\n",rank,CFI_MAX_RANK);
 
     self = (CFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
+        
     self->dv.rank = (CFI_rank_t) rank;
-    
+    self->dv.base_addr = NULL;
+
     return (newfunc) self;
 
 }
 
 
 static PyType_Slot PyCFI_cdesc_slots[] = {
-    { Py_tp_doc, PyDoc_STR("CFI_cdesc_t holds the C descriptor")},
+    { Py_tp_doc, PyDoc_STR("CFI_cdesc_t holds the C descriptor. Initialize with rank (up to CFI_MAX_RANK) or defaults to rank-0")},
     { Py_tp_members, &PyCFI_cdesc_members},
     { Py_tp_getset, &PyCFI_cdesc_getset},
     { Py_tp_dealloc, PyCFI_cdesc_dealloc},
