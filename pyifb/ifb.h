@@ -53,8 +53,6 @@
         #define Py_T_LONG T_LONG
         #define Py_T_PYSSIZET T_PYSSIZET
         #define Py_T_SHORT T_SHORT
-    #endif
-    #if PY_MINOR_VERSION < 11
         #define Py_READONLY READONLY
     #endif
 #endif
