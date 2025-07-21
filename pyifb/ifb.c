@@ -9,11 +9,11 @@
 // START CFI_dimt_t setup
 
 static PyMemberDef PyCFI_dim_members[] = {
-    {"lower_bound",PyCFI_index_t, offsetof(CFI_dim_object,dim.lower_bound),Py_READONLY,
+    {"lower_bound",PyCFI_index_t, offsetof(PyCFI_dim_object,dim.lower_bound),Py_READONLY,
         PyDoc_STR("The value is equal to the value of the lower bound for the dimension being described")},
-    {"extent",PyCFI_index_t,offsetof(CFI_dim_object,dim.extent),Py_READONLY,
+    {"extent",PyCFI_index_t,offsetof(PyCFI_dim_object,dim.extent),Py_READONLY,
         PyDoc_STR("The value is equal to the number of elements along the dimension being described, or the value -1 for the final dimension of an assumed-size array.")},
-    {"sm",PyCFI_index_t,offsetof(CFI_dim_object,dim.sm),Py_READONLY,
+    {"sm",PyCFI_index_t,offsetof(PyCFI_dim_object,dim.sm),Py_READONLY,
         PyDoc_STR("The value is equal to the memory stride for a dimension. The value is the distance in bytes between the beginnings of successive elements along the dimension being described.")},
     {NULL},  /* Sentinel */
 };
@@ -26,19 +26,34 @@ static PyType_Slot PyCFI_dim_slots[] = {
 
 static PyType_Spec PyCFI_dim_spec = {
     .name = "ifb.CFI_dim_t",
-    .basicsize = sizeof(CFI_dim_object),
+    .basicsize = sizeof(PyCFI_dim_object),
     .itemsize = 0,
     .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
     .slots = PyCFI_dim_slots,
 };
 
-static PyObject* PyCFI_dim_object_from_CFI_dim_t(CFI_dim_t* in){
+static PyObject* new_PyCFI_dim(){
 
-    CFI_dim_object *out;
+    PyCFI_dim_object *out;
 
-    out->dim.lower_bound = in->lower_bound;
-    out->dim.extent = in->extent;
-    out->dim.sm = in->sm;  
+    PyObject *CFI_dim_type = PyType_FromSpec(&PyCFI_dim_spec);
+    if (CFI_dim_type == NULL) {
+        Py_RETURN_NONE;
+    }
+
+    out = (PyCFI_dim_object*) PyObject_CallObject(CFI_dim_type, NULL);
+    Py_XDECREF(CFI_dim_type);
+
+    return (PyObject*) out;
+
+}
+
+
+static PyObject* PyCFI_dim_object_from_CFI_dim_t(CFI_dim_t in){
+
+    PyCFI_dim_object *out = (PyCFI_dim_object*) new_PyCFI_dim();
+
+    if(out){out->dim = in;}
 
     return (PyObject*) out; 
 }
@@ -51,31 +66,32 @@ static PyObject* PyCFI_dim_object_from_CFI_dim_t(CFI_dim_t* in){
 // START CFI_cdesc setup
 
 static PyMemberDef PyCFI_cdesc_members[] = {
-    {"elem_len",Py_T_PYSSIZET,offsetof(CFI_cdesc_object,dv.elem_len),Py_READONLY,
+    {"elem_len",Py_T_PYSSIZET,offsetof(PyCFI_cdesc_object,dv.elem_len),Py_READONLY,
         PyDoc_STR("If the object is scalar, the value is the storage size in bytes of the object; otherwise, the value is the storage size in bytes of an element of the object")},
-    {"type",PyCFI_type_t,offsetof(CFI_cdesc_object,dv.type),Py_READONLY,
+    {"type",PyCFI_type_t,offsetof(PyCFI_cdesc_object,dv.type),Py_READONLY,
         PyDoc_STR("The value is equal to the specifier for the type of the object.")},
-    {"version",Py_T_INT,offsetof(CFI_cdesc_object,dv.version),Py_READONLY,
+    {"version",Py_T_INT,offsetof(PyCFI_cdesc_object,dv.version),Py_READONLY,
         PyDoc_STR("The value is equal to the value of CFI VERSION in the ISO_Fortran_binding.h header file that defined the format and meaning of this C descriptor when the descriptor was established.")},
         {NULL}  /* Sentinel */
 };
 
 
-static PyObject* PyCFI_cdesc_base_addr_get(CFI_cdesc_object* self, void* Py_UNUSED){
+static PyObject* PyCFI_cdesc_base_addr_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     return PyLong_FromVoidPtr(self->dv.base_addr);
 }
 
-static PyObject* PyCFI_cdesc_rank_get(CFI_cdesc_object* self, void* Py_UNUSED){
+static PyObject* PyCFI_cdesc_rank_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     return PyLong_FromLong((long) self->dv.rank);
 }
 
-static PyObject* PyCFI_cdesc_attribute_get(CFI_cdesc_object* self, void* Py_UNUSED){
+static PyObject* PyCFI_cdesc_attribute_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     return PyLong_FromLong((long) self->dv.attribute);
 }
 
-static PyObject* PyCFI_cdesc_dim_get(CFI_cdesc_object* self, void* Py_UNUSED){
+static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
 
     int8_t rank = self->dv.rank;
+    PyObject *tmp;
 
     if(rank==0){
         Py_RETURN_NONE;
@@ -88,7 +104,9 @@ static PyObject* PyCFI_cdesc_dim_get(CFI_cdesc_object* self, void* Py_UNUSED){
 
     int res;
     for(int i = 0; i < (int) rank; i++){
-        res = PyTuple_SetItem(dims, i, PyCFI_dim_object_from_CFI_dim_t(&self->dv.dim[i]));
+        tmp = PyCFI_dim_object_from_CFI_dim_t(self->dv.dim[i]);
+        Py_INCREF(tmp);
+        res = PyTuple_SetItem(dims, i, tmp);
         if(res!=0) {
             Py_XDECREF(dims);
             PyErr_SetString(PyExc_ValueError, "Error setting dimensions");
@@ -125,7 +143,7 @@ static PyGetSetDef PyCFI_cdesc_getset[] = {
 };
 
 
-static void PyCFI_cdesc_dealloc(CFI_cdesc_object *self) {
+static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
     PyTypeObject *tp = Py_TYPE(self);
     CFI_deallocate(&self->dv);
     ((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
@@ -135,7 +153,7 @@ static void PyCFI_cdesc_dealloc(CFI_cdesc_object *self) {
 static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_UNUSED){
 
     int rank=0;
-    CFI_cdesc_object *self;
+    PyCFI_cdesc_object *self;
 
     if (!PyArg_ParseTuple(args, "|i:", &rank)){
         if(PyErr_Occurred()){
@@ -155,7 +173,7 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_U
 
     printf("Rank of %d %d\n",rank,CFI_MAX_RANK);
 
-    self = (CFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
+    self = (PyCFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
         
     self->dv.rank = (CFI_rank_t) rank;
     self->dv.base_addr = NULL;
@@ -176,7 +194,7 @@ static PyType_Slot PyCFI_cdesc_slots[] = {
 
 static PyType_Spec PyCFI_cdesc_spec = {
     .name = "ifb.CFI_cdesc_t",
-    .basicsize = sizeof(CFI_cdesc_object),
+    .basicsize = sizeof(PyCFI_cdesc_object),
     .itemsize = sizeof(CFI_dim_t),
     .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
     .slots = PyCFI_cdesc_slots,

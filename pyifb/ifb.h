@@ -91,11 +91,11 @@ static int add_pytypes(PyObject *m);
 typedef struct {
     PyObject_HEAD
     CFI_dim_t dim;
-} CFI_dim_object;
+} PyCFI_dim_object;
 
 typedef struct {
-    PyObject_HEAD
+    PyObject_VAR_HEAD
     CFI_cdesc_t dv;
-} CFI_cdesc_object;
+} PyCFI_cdesc_object;
 
 

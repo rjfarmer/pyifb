@@ -28,3 +28,9 @@ class TestCdescT:
 
         with pytest.raises(TypeError):
             cdesc = p.CFI_cdesc_t("a")
+
+    def test_dim(self):
+        z = p.CFI_cdesc_t(p.CFI_MAX_RANK)
+
+        for i in range(0, p.CFI_MAX_RANK):
+            assert z.dim[i].extent == 0
