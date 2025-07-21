@@ -11,9 +11,9 @@ jobs:
         os: [ubuntu-latest]    
         python-version: [ '3.13']    
         toolchain:
-          - {compiler: intel, version: 2025.0}
-          - {compiler: intel, version: 2024.0}
-          - {compiler: intel, version: 2023.0}
+          - {compiler: intel, version: '2025.0'}
+          - {compiler: intel, version: '2024.0'}
+          - {compiler: intel, version: '2023.0'}
 
 
     steps:
@@ -32,7 +32,6 @@ jobs:
           python -m pip install build wheel pip-tools
           pip-compile -o requirements.txt --extra test --strip-extras
           python -m pip install -r requirements.txt
-          sudo apt-get install -y intel-oneapi-compiler-fortran-2025.0 intel-oneapi-compiler-dpcpp-cpp-2025.0
 
       - uses: fortran-lang/setup-fortran@v1
         id: setup-fortran
