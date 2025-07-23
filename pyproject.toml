@@ -34,13 +34,13 @@ packages = ["pyifb"]
 
 
 [project.optional-dependencies]
-test = ['pytest','pytest-xdist']
-coverage = ['pytest', 'pytest-xdist', 'pytest-cov']
-dev = ['pre-commit','black', 'pytest','pytest-xdist']
-perfomance = ["pytest", "pytest-codspeed", 'pytest-xdist']
+test = ['pytest']
+coverage = ['pytest', 'pytest-cov']
+dev = ['pre-commit','black', 'pytest']
+perfomance = ["pytest", "pytest-codspeed"]
 
 [tool.pytest.ini_options]
-addopts = "-s -n auto"
+addopts = "-s"
 testpaths = ["tests"]
 
 [tool.bandit]
