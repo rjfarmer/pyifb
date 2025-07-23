@@ -1,5 +1,9 @@
 import pyifb as p
 
-c = p.CFI_cdesc_t(5)
+z = p.CFI_cdesc_t(5)
 
-print(c.dim[0])
+
+aa = z.to_bytes()
+print(aa)
+
+b = p.CFI_cdesc_t.from_bytes(aa)

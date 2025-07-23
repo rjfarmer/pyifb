@@ -110,7 +110,8 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
         res = PyTuple_SetItem(dims, i, tmp);
         if(res!=0) {
             Py_XDECREF(dims);
-            PyErr_SetString(PyExc_ValueError, "Error setting dimensions");
+            PyErr_Print();
+            PyErr_SetString(PyExc_ValueError, "Error setting dimension");
             Py_RETURN_NONE;
         }
     }
@@ -161,14 +162,19 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_U
 
 static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
 
-    // Make a maximal sized object then look at the rank for the size
+    if(!PyBytes_Check(arg)){
+        PyErr_SetString(PyExc_TypeError, "Must be a byte array");
+        return NULL;
+    }
+
     CFI_CDESC_T(CFI_MAX_RANK) object;
 
     memcpy(&object, PyBytes_AsString(arg), PyBytes_Size(arg));
 
     int rank = object.rank;
 
-    PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc( PyLong_FromLong(rank));
+    printf("Got rank %d\n",rank);
+    PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc(PyLong_FromLong(rank));
 
     memcpy(&self->dv, PyBytes_AsString(arg), PyBytes_Size(arg));
 
@@ -183,7 +189,7 @@ static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * args)
 
     memcpy(buffer, &self->dv, size);
 
-    return PyByteArray_FromStringAndSize(buffer, size);
+    return PyBytes_FromStringAndSize(buffer, size);
 
 }
 
@@ -265,10 +271,13 @@ static PyObject* new_PyCFI_cdesc(PyObject* rank){
         Py_RETURN_NONE;
     }
 
-    int res = PyTuple_SetItem(dims, 1, rank);
+    Py_INCREF(rank);
+    int res = PyTuple_SetItem(dims, 0, rank);
     if(res!=0) {
         Py_XDECREF(dims);
-        PyErr_SetString(PyExc_ValueError, "Error setting dimensions");
+        Py_XDECREF(rank);
+        Py_XDECREF(PyCFI_cdesc_type);
+        PyErr_SetString(PyExc_ValueError, "Error setting up new dimension\n");
         Py_RETURN_NONE;
     }
 
