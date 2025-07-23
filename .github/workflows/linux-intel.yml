@@ -41,7 +41,7 @@ jobs:
     
       - name: Build
         run: |
-          export CC=${{ matrix.toolchain.compiler }}
+          export CC=icc
           python -m build
           python -m pip install dist/pyifb*.whl
 
