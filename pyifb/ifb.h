@@ -53,6 +53,7 @@
         #define Py_T_LONG T_LONG
         #define Py_T_PYSSIZET T_PYSSIZET
         #define Py_T_SHORT T_SHORT
+        #define Py_T_BYTE T_BYTE
         #define Py_READONLY READONLY
     #endif
 #endif
@@ -60,19 +61,35 @@
 // Can't use sizeof here but we know that CFI_index_t is
 // type ptrdiff_t
 #if REALLY_GCC
-#if __SIZEOF_PTRDIFF_T__ == 8
-#define PyCFI_index_t Py_T_LONG
-#else
-#define PyCFI_index_t Py_T_INT
-#endif
+    #if __SIZEOF_PTRDIFF_T__ == 8
+        #define PyCFI_index_t Py_T_LONG
+    #else
+        #define PyCFI_index_t Py_T_INT
+    #endif
+    // int16
+    #define PyCFI_type_t Py_T_SHORT
 
-// int16
-#define PyCFI_type_t Py_T_SHORT
+    // int8
+    #define PyCFI_attrbute_t Py_T_BYTE
+    #define PyCFI_rank_t Py_T_BYTE
 
+#elif REALLY_ICX
+    #if __SIZEOF_PTRDIFF_T__ == 8
+        #define PyCFI_index_t Py_T_LONG
+        #define PyCFI_type_t Py_T_LONG
+        #define PyCFI_attrbute_t Py_T_LONG
+        #define PyCFI_rank_t Py_T_LONG
+    #else
+        #define PyCFI_index_t Py_T_INT
+        #define PyCFI_type_t Py_T_INT
+        #define PyCFI_attrbute_t Py_T_INT
+        #define PyCFI_rank_t Py_T_INT
+    #endif
 #else
-// Non gcc compilier will need thier own fix for 32 bit machines
-// (if we care)
-#define PyCFI_index_t Py_T_LONG
+    #define PyCFI_index_t Py_T_LONG
+    #define PyCFI_type_t Py_T_LONG
+    #define PyCFI_attrbute_t Py_T_LONG
+    #define PyCFI_rank_t Py_T_LONG
 #endif
 
 #define xstr(a) str(a)

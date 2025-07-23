@@ -91,7 +91,7 @@ static PyObject* PyCFI_cdesc_attribute_get(PyCFI_cdesc_object* self, void* Py_UN
 
 static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
 
-    int8_t rank = self->dv.rank;
+    CFI_rank_t rank = self->dv.rank;
     PyObject *tmp;
 
     if(rank==0){
@@ -104,7 +104,7 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     }
 
     int res;
-    for(int i = 0; i < (int) rank; i++){
+    for(int i = 0; i < rank; i++){
         tmp = PyCFI_dim_object_from_CFI_dim_t(self->dv.dim[i]);
         Py_INCREF(tmp);
         res = PyTuple_SetItem(dims, i, tmp);
@@ -129,7 +129,7 @@ static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
 
 static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_UNUSED){
 
-    int rank=0;
+    CFI_rank_t rank=0;
     PyCFI_cdesc_object *self;
 
     if (!PyArg_ParseTuple(args, "|i:", &rank)){
@@ -148,11 +148,10 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_U
         return NULL;
     }
 
-    printf("Rank of %d %d\n",rank,CFI_MAX_RANK);
 
     self = (PyCFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
         
-    self->dv.rank = (CFI_rank_t) rank;
+    self->dv.rank = rank;
     self->dv.base_addr = NULL;
 
     return (newfunc) self;
@@ -168,11 +167,10 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
     }
 
     char* bytes = PyBytes_AsString(arg);
-    int rank;
+    CFI_rank_t rank;
 
     memcpy(&rank, &bytes[offsetof(CFI_cdesc_t,rank)], sizeof(CFI_rank_t));
 
-    printf("Got rank %d\n",rank);
     PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc(PyLong_FromLong(rank));
 
     memcpy(&self->dv, bytes, PyBytes_Size(arg));
@@ -184,7 +182,7 @@ static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * args)
 
     Py_ssize_t size = sizeof(CFI_cdesc_t) + sizeof(CFI_dim_t) * self->dv.rank;
 
-    unsigned char buffer[size];
+    char buffer[size];
 
     memcpy(buffer, &self->dv, size);
 
