@@ -41,7 +41,7 @@ jobs:
     
       - name: Build
         run: |
-          export CC=icc
+          export CC=icx
           python -m build
           python -m pip install dist/pyifb*.whl
 
