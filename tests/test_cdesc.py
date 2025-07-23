@@ -34,3 +34,14 @@ class TestCdescT:
 
         for i in range(0, p.CFI_MAX_RANK):
             assert z.dim[i].extent == 0
+
+    def test_bytes(self):
+        z = p.CFI_cdesc_t(5)
+
+        by = z.to_bytes()
+
+        assert isinstance(by, bytes)
+
+        a = p.CFI_cdesc_t.from_bytes(by)
+
+        assert a.rank == 5
