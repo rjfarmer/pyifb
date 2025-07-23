@@ -163,20 +163,19 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_U
 static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
 
     if(!PyBytes_Check(arg)){
-        PyErr_SetString(PyExc_TypeError, "Must be a byte array");
+        PyErr_SetString(PyExc_TypeError, "Must be a bytes object");
         return NULL;
     }
 
-    CFI_CDESC_T(CFI_MAX_RANK) object;
+    char* bytes = PyBytes_AsString(arg);
+    int rank;
 
-    memcpy(&object, PyBytes_AsString(arg), PyBytes_Size(arg));
-
-    int rank = object.rank;
+    memcpy(&rank, &bytes[offsetof(CFI_cdesc_t,rank)], sizeof(CFI_rank_t));
 
     printf("Got rank %d\n",rank);
     PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc(PyLong_FromLong(rank));
 
-    memcpy(&self->dv, PyBytes_AsString(arg), PyBytes_Size(arg));
+    memcpy(&self->dv, bytes, PyBytes_Size(arg));
 
     return (PyObject *) self;
 }
