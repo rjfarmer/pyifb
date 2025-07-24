@@ -7,6 +7,7 @@ if os.environ.get("CC") == "icx":
     lib = []
     lib_dirs = [str(Path(os.environ.get("ONEAPI_ROOT"), "compilier", "latest", "lib"))]
     args = ["-fortlib"]
+    link_args = ["-fortlib"]
 else:
     lib = ["gfortran"]
     lib_dirs = []
@@ -16,6 +17,7 @@ else:
         "-fno-eliminate-unused-debug-symbols",
         "-fvar-tracking-assignments",
     ]
+    link_args = []
 
 
 setup(
@@ -28,6 +30,7 @@ setup(
             library_dirs=lib_dirs,
             libraries=lib,
             extra_compile_args=args,
+            extra_link_args=link_args,
             py_limited_api=True,
         )
     ],
