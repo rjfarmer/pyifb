@@ -78,6 +78,9 @@ static PyMemberDef PyCFI_cdesc_members[] = {
 
 
 static PyObject* PyCFI_cdesc_base_addr_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
+    if(self->dv.base_addr==NULL) {
+        return Py_None;
+    }
     return PyLong_FromVoidPtr(self->dv.base_addr);
 }
 
