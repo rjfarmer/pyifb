@@ -351,6 +351,15 @@ static int add_constants(PyObject *m){
         return 1;
     } 
 
+    if (PyModule_AddIntConstant(m, "_sizeof_cdesc", sizeof(CFI_cdesc_t))) {
+        return 1;
+    } 
+
+    if (PyModule_AddIntConstant(m, "_sizeof_dims", sizeof(CFI_dim_t))) {
+        return 1;
+    } 
+
+
     return 0;
 }
 

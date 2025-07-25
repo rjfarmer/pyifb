@@ -21,6 +21,9 @@ class CFI_cdesc:
     def _as_parameter_(self):
         return self._cfi._as_parameter_
 
+    def in_dll(self, lib):
+        pass
+
     @property
     def value(self):
         if self._cfi.base_addr is None:
