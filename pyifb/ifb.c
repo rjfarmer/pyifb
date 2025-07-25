@@ -92,7 +92,6 @@ static PyObject* PyCFI_cdesc_attribute_get(PyCFI_cdesc_object* self, void* Py_UN
 static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
 
     CFI_rank_t rank = self->dv.rank;
-    PyObject *tmp;
 
     if(rank==0){
         Py_RETURN_NONE;
@@ -103,6 +102,7 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
         Py_RETURN_NONE;
     }
 
+    PyObject *tmp;
     int res;
     for(int i = 0; i < rank; i++){
         tmp = PyCFI_dim_object_from_CFI_dim_t(self->dv.dim[i]);
@@ -110,7 +110,7 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
         res = PyTuple_SetItem(dims, i, tmp);
         if(res!=0) {
             Py_XDECREF(dims);
-            PyErr_Print();
+            Py_XDECREF(tmp);
             PyErr_SetString(PyExc_ValueError, "Error setting dimension");
             Py_RETURN_NONE;
         }
@@ -124,19 +124,21 @@ static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
     PyTypeObject *tp = Py_TYPE(self);
     CFI_deallocate(&self->dv);
     ((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
-    Py_DECREF(tp);
+    Py_CLEAR(tp);
 }
 
-static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_UNUSED){
+static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
 
     CFI_rank_t rank=0;
-    PyCFI_cdesc_object *self;
+    int rank_int=0;
 
-    if (!PyArg_ParseTuple(args, "|i:", &rank)){
+    if (!PyArg_ParseTuple(args, "|i", &rank_int)){
         if(PyErr_Occurred()){
             return NULL;
         }
+        rank_int = 0;
     }
+    rank = (CFI_rank_t) rank_int;
 
     if(rank>CFI_MAX_RANK){
         PyErr_SetString(PyExc_ValueError, "Rank must be less than " STR_CFI_MAX_RANK "");
@@ -148,9 +150,9 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, void* Py_U
         return NULL;
     }
 
-
+    PyCFI_cdesc_object *self;
     self = (PyCFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
-        
+
     self->dv.rank = rank;
     self->dv.base_addr = NULL;
 
@@ -163,7 +165,7 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
 
     if(!PyBytes_Check(arg)){
         PyErr_SetString(PyExc_TypeError, "Must be a bytes object");
-        return NULL;
+        Py_RETURN_NONE;
     }
 
     char* bytes = PyBytes_AsString(arg);
@@ -171,14 +173,15 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
 
     memcpy(&rank, &bytes[offsetof(CFI_cdesc_t,rank)], sizeof(CFI_rank_t));
 
-    PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc(PyLong_FromLong(rank));
+    PyObject* obj_rank = PyLong_FromLong(rank);
+    PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc(obj_rank);
 
     memcpy(&self->dv, bytes, PyBytes_Size(arg));
 
     return (PyObject *) self;
 }
 
-static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * args){
+static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * Py_UNUSED){
 
     Py_ssize_t size = sizeof(CFI_cdesc_t) + sizeof(CFI_dim_t) * self->dv.rank;
 
@@ -190,7 +193,7 @@ static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * args)
 
 }
 
-static PyObject* PyCFI_cdesc_as_parameter_(PyCFI_cdesc_object * self, void * y){
+static PyObject* PyCFI_cdesc_as_parameter_(PyCFI_cdesc_object * self, PyObject * Py_UNUSED){
     return PyCFI_cdesc_to_bytes(self, NULL);
 }
 
@@ -256,30 +259,32 @@ static PyType_Spec PyCFI_cdesc_spec = {
 
 static PyObject* new_PyCFI_cdesc(PyObject* rank){
 
-    PyCFI_cdesc_object *out;
-
     PyObject *PyCFI_cdesc_type = PyType_FromSpec(&PyCFI_cdesc_spec);
     if (PyCFI_cdesc_type == NULL) {
+        Py_XDECREF(PyCFI_cdesc_type);
         Py_RETURN_NONE;
     }
 
     PyObject *dims = PyTuple_New((Py_ssize_t) 1);
     if(dims == NULL) {
+        Py_DECREF(PyCFI_cdesc_type);
+        Py_XDECREF(dims);
         Py_RETURN_NONE;
     }
 
     Py_INCREF(rank);
     int res = PyTuple_SetItem(dims, 0, rank);
     if(res!=0) {
-        Py_XDECREF(dims);
         Py_XDECREF(rank);
-        Py_XDECREF(PyCFI_cdesc_type);
+        Py_DECREF(PyCFI_cdesc_type);
+        Py_XDECREF(dims);
         PyErr_SetString(PyExc_ValueError, "Error setting up new dimension\n");
         Py_RETURN_NONE;
     }
 
-    out = (PyCFI_cdesc_object*) PyObject_CallObject(PyCFI_cdesc_type, dims);
+    PyCFI_cdesc_object *out = (PyCFI_cdesc_object*) PyObject_CallObject(PyCFI_cdesc_type, dims);
     Py_XDECREF(PyCFI_cdesc_type);
+    Py_XDECREF(dims);
 
     return (PyObject*) out;
 
@@ -653,10 +658,10 @@ PyInit_ifb(void) {
 #else
     PyObject *module;
     module = PyModule_Create(&IFBModule);
-    if (module == NULL) return NULL;
+    if (module == NULL) Py_RETURN_NONE;
     if (IFBModule_exec(module) != 0) {
-        Py_DECREF(module);
-        return NULL;
+        Py_XDECREF(module);
+        Py_RETURN_NONE;
     }
     return module;
 #endif

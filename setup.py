@@ -16,6 +16,9 @@ else:
         "-O",
         "-fno-eliminate-unused-debug-symbols",
         "-fvar-tracking-assignments",
+        "-Wall",
+        "-fstack-protector-all",
+        "-fcheck=all",
     ]
     link_args = []
 
