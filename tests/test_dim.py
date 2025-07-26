@@ -7,7 +7,7 @@ import pytest
 
 class TestDimT:
     def test_members(self):
-        dim = p.CFI_dim_t()
+        dim = p.ifb.CFI_dim_t()
 
         assert dim.extent == 0
         assert dim.lower_bound == 0

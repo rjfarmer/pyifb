@@ -53,7 +53,7 @@
         #define Py_T_LONG T_LONG
         #define Py_T_PYSSIZET T_PYSSIZET
         #define Py_T_SHORT T_SHORT
-        #define Py_T_BYTE T_BYTE
+        #define Py_T_BYTE Py_T_CHAR
         #define Py_READONLY READONLY
     #endif
 #endif
@@ -70,8 +70,8 @@
     #define PyCFI_type_t Py_T_SHORT
 
     // int8
-    #define PyCFI_attrbute_t Py_T_BYTE
-    #define PyCFI_rank_t Py_T_BYTE
+    #define PyCFI_attrbute_t Py_T_CHAR
+    #define PyCFI_rank_t Py_T_CHAR
 
 #elif REALLY_ICX
     #if __SIZEOF_PTRDIFF_T__ == 8

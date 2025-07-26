@@ -190,7 +190,7 @@ static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * Py_UN
 
     char buffer[size];
 
-    memcpy(buffer, &self->dv, size);
+    memcpy(&buffer, &self->dv, size);
 
     return PyBytes_FromStringAndSize(buffer, size);
 
@@ -367,15 +367,12 @@ static int add_compiler_constants(PyObject *m){
 
     // GCC specifics
     #if REALLY_GCC
-    if (PyModule_AddIntMacro(m, CFI_FAILURE)) {
-        return 1;
-    }   
-    if (PyModule_AddIntMacro(m, CFI_INVALID_STRIDE)) {
-        return 1;
-    } 
-    // if (PyModule_AddIntConstant(m,"sizeof_cfi_index_t", sizeof(CFI_index_t))) {
-    //     return 1;
-    // } 
+        if (PyModule_AddIntMacro(m, CFI_FAILURE)) {
+            return 1;
+        }   
+        if (PyModule_AddIntMacro(m, CFI_INVALID_STRIDE)) {
+            return 1;
+        } 
 
     #endif
 
@@ -387,26 +384,26 @@ static int add_compiler_constants(PyObject *m){
 static int set_compiler(PyObject *m){
 
     #if REALLY_GCC
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER", "GCC")) {
-        return 1;
-    }  
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
-        return 1;
-    } 
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER", "GCC")) {
+            return 1;
+        }  
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
+            return 1;
+        } 
     #elif REALLY_ICX
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER", "ICX")) {
-        return 1;
-    }   
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
-        return 1;
-    }          
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER", "ICX")) {
+            return 1;
+        }   
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
+            return 1;
+        }          
     #else
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER", "UNKNOWN")) {
-        return 1;
-    }   
-    if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", "-1")) {
-        return 1;
-    }      
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER", "UNKNOWN")) {
+            return 1;
+        }   
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", "-1")) {
+            return 1;
+        }      
     #endif
 
     return 0;
