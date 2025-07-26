@@ -396,7 +396,14 @@ static int set_compiler(PyObject *m){
         }   
         if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
             return 1;
-        }          
+        }    
+    #elif REALLY_LLVM
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER", "CLANG")) {
+            return 1;
+        }   
+        if (PyModule_AddStringConstant(m, "IFB_COMPILER_VERSION", __VERSION__)) {
+            return 1;
+        }             
     #else
         if (PyModule_AddStringConstant(m, "IFB_COMPILER", "UNKNOWN")) {
             return 1;
@@ -544,7 +551,8 @@ static int add_types(PyObject *m){
 
 static int add_compiler_types(PyObject *m){
 
-    // GCC specifics
+    // GCC specifics but get defined as -1 in the header
+
     if (PyModule_AddIntMacro(m, CFI_type_mask)) {
         return 1;
     }

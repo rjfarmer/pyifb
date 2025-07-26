@@ -1,0 +1,46 @@
+name: Linux LLVM clang
+on: [push, pull_request]
+permissions: {}
+
+jobs:
+  linux_intel:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]    
+        python-version: [ '3.13']    
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: 'pip'
+
+      - name: Install compilier
+        run: |
+          sudo apt install -y flang clang flang-dev clang-dev
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build wheel pip-tools
+          pip-compile -o requirements.txt --extra test --strip-extras
+          python -m pip install -r requirements.txt
+    
+      - name: Build
+        run: |
+          export CC=clang
+          python -m build
+          python -m pip install dist/pyifb*.whl
+
+  
+      - name: Test
+        # Don't use python -m pytest as that screws up the module loading
+        run: |
+          pytest -v
+

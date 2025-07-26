@@ -22,29 +22,31 @@
 // Stupid compiliers grabbing __GNUC__
 
 #if defined(__GNUC__) && !defined(__llvm__) && !defined(__INTEL_COMPILER)
-#define REALLY_GCC   __GNUC__ 
+    #define REALLY_GCC   __GNUC__ 
 #elif defined(__INTEL_COMPILER) 
-#define REALLY_ICX __ __INTEL_COMPILER
+    #define REALLY_ICX __ __INTEL_COMPILER
+#elif defined(__llvm__) 
+    #define REALLY_LLVM __llvm__
 #else
-#define REALLY_UNKNOWN 
+    #define REALLY_UNKNOWN 
 #endif
 
 
 // Add fallback for compilier specific macros
 
-#if defined(REALLY_ICX) || defined(REALLY_UNKNOWN)
-#define CFI_FAILURE -1
-#define CFI_INVALID_STRIDE -1
-#define CFI_type_mask -1
-#define CFI_type_kind_shift -1
-#define CFI_type_Integer -1
-#define CFI_type_Logical -1
-#define CFI_type_Real -1
-#define CFI_type_Complex -1
-#define CFI_type_Character -1
-#define CFI_type_cfunptr -1
-#define CFI_type_float128 -1
-#define CFI_type_float128_Complex -1
+#ifndef REALLY_GCC
+    #define CFI_FAILURE -1
+    #define CFI_INVALID_STRIDE -1
+    #define CFI_type_mask -1
+    #define CFI_type_kind_shift -1
+    #define CFI_type_Integer -1
+    #define CFI_type_Logical -1
+    #define CFI_type_Real -1
+    #define CFI_type_Complex -1
+    #define CFI_type_Character -1
+    #define CFI_type_cfunptr -1
+    #define CFI_type_float128 -1
+    #define CFI_type_float128_Complex -1
 #endif
 
 #if PY_MAJOR_VERSION == 3

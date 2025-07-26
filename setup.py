@@ -8,6 +8,12 @@ if os.environ.get("CC") == "icx":
     lib_dirs = [str(Path(os.environ.get("ONEAPI_ROOT"), "compilier", "latest", "lib"))]
     args = ["-fortlib"]
     link_args = ["-fortlib"]
+elif os.environ.get("CC") == "clang":
+    lib = ["FortranRuntime"]
+    lib_dirs = []
+    args = ["-rtlib=flang-rt"]
+    link_args = []
+
 else:
     lib = ["gfortran"]
     lib_dirs = []
