@@ -1,11 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0+
 
 import pyifb as p
+import pyifb.utils as utils
 
 import pytest
 import ctypes
+from pathlib import Path
 
-lib = ctypes.CDLL("tests/bindc.so")
+
+lib = ctypes.CDLL(Path("tests", f"bindc.{utils.library_ext()}"))
 
 
 class TestF90:
