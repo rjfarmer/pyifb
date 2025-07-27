@@ -34,7 +34,12 @@
 
 // Add fallback for compilier specific macros
 
-#ifndef REALLY_GCC
+#ifdef REALLY_ICX
+    #define CFI_type_float128 -1
+    #define CFI_type_float128_Complex -1
+#endif
+
+#if defined(REALLY_ICX) || defined(REALLY_LLVM)
     #define CFI_FAILURE -1
     #define CFI_INVALID_STRIDE -1
     #define CFI_type_mask -1
@@ -45,8 +50,6 @@
     #define CFI_type_Complex -1
     #define CFI_type_Character -1
     #define CFI_type_cfunptr -1
-    #define CFI_type_float128 -1
-    #define CFI_type_float128_Complex -1
 #endif
 
 #if PY_MAJOR_VERSION == 3

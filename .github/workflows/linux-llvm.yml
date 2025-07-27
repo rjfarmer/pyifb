@@ -24,7 +24,7 @@ jobs:
       - name: Install compilier
         run: |
           sudo apt-get update
-          sudo apt-get install -y flang clang libflang-dev
+          sudo apt-get install -y flang-20 clang-20 libflang-20-dev
 
       - name: Install dependencies
         run: |

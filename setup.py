@@ -11,7 +11,7 @@ if os.environ.get("CC") == "icx":
 elif os.environ.get("CC") == "clang":
     lib = ["FortranRuntime"]
     lib_dirs = []
-    args = ["-rtlib=flang-rt"]
+    args = []
     link_args = []
 
 else:
