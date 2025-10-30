@@ -1,22 +1,31 @@
 from setuptools import setup, Extension
 import os
 from pathlib import Path
+import platform
 
+
+lib = []
+lib_dirs = []
+args = []
+link_args = []
+extra_objects = []
 
 if os.environ.get("CC") == "icx":
-    lib = []
     lib_dirs = [str(Path(os.environ.get("ONEAPI_ROOT"), "compilier", "latest", "lib"))]
     args = ["-fortlib"]
     link_args = ["-fortlib"]
 elif os.environ.get("CC") == "clang":
-    lib = ["FortranRuntime"]
-    lib_dirs = []
-    args = []
-    link_args = []
+
+    # Ubuntu only has static version of libFortranRuntime while Fedora has shared
+    if "Ubuntu" in platform.version():
+        extra_objects = ["libFortranRuntime.a"]
+        lib_dirs = ["-L/usr/lib/llvm-18/lib/"]
+    else:
+        lib = ["FortranRuntime"]
+
 
 else:
     lib = ["gfortran"]
-    lib_dirs = []
     args = [
         "-ggdb",
         "-O",
@@ -26,7 +35,6 @@ else:
         "-fstack-protector-all",
         "-fcheck=all",
     ]
-    link_args = []
 
 
 setup(
@@ -40,6 +48,7 @@ setup(
             libraries=lib,
             extra_compile_args=args,
             extra_link_args=link_args,
+            extra_objects=extra_objects,
             py_limited_api=True,
         )
     ],
