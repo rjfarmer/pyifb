@@ -7,7 +7,6 @@ import pytest
 import ctypes
 from pathlib import Path
 
-
 lib = ctypes.CDLL(Path("tests", f"bindc.{utils.library_ext()}"))
 
 
