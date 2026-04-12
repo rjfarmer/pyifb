@@ -72,7 +72,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/project/pyQuadP
+      url: https://pypi.org/project/pyIFB
     permissions:
       id-token: write
     # or, alternatively, upload to PyPI on every tag starting with 'v' (remove on: release above to use this)
