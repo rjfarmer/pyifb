@@ -328,7 +328,7 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
        Args: base_addr (void*), attribute (int), type (int), elem_len (int), rank (int), extents (sequence)
        Returns: Status code (CFI_SUCCESS or error code)
     */
-    PyObject *base_addr_obj, *extents_seq;
+    PyObject *base_addr_obj, *extents_seq, *attribute_obj, *type_obj, *elem_len_obj, *rank_obj;
     CFI_attribute_t attribute;
     CFI_type_t type;
     size_t elem_len;
@@ -337,17 +337,46 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     void *base_addr;
     int status;
 
-    if (!PyArg_ParseTuple(args, "OIIKIO", &base_addr_obj, &attribute, &type, &elem_len, &rank, &extents_seq)) {
+
+    if (!PyArg_ParseTuple(args, "OOOOOO", &base_addr_obj, &attribute_obj, &type_obj, &elem_len_obj, &rank_obj, &extents_seq)) {
         return NULL;
     }
 
     /* Convert base_addr from Python object */
-    if (base_addr_obj == Py_None) {
-        base_addr = NULL;
+    if (Py_IsNone(base_addr_obj)) {
+       base_addr = NULL;
     } else if (PyLong_Check(base_addr_obj)) {
-        base_addr = PyLong_AsVoidPtr(base_addr_obj);
+       base_addr = PyLong_AsVoidPtr(base_addr_obj);
     } else {
         PyErr_SetString(PyExc_TypeError, "base_addr must be None or an integer");
+        return NULL;
+    }
+
+    if (PyLong_Check(attribute_obj)) {
+        attribute = (CFI_attribute_t) PyLong_AsLong(attribute_obj);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "attribute must be an integer");
+        return NULL;
+    }
+
+    if(PyLong_Check(type_obj)) {
+        type = (CFI_type_t) PyLong_AsLong(type_obj);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "type must be an integer");
+        return NULL;
+    }
+
+    if(PyLong_Check(elem_len_obj)) {
+        elem_len = (size_t) PyLong_AsSize_t(elem_len_obj);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "elem_len must be an integer");
+        return NULL;
+    }
+
+    if(PyLong_Check(rank_obj)) {
+        rank = (CFI_rank_t) PyLong_AsLong(rank_obj);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "rank must be an integer");
         return NULL;
     }
 
@@ -382,6 +411,7 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     }
 
     /* Call CFI_establish */
+    printf("Extents: %d %d\n", (int)extents[0], (int)extents[1]);
     status = CFI_establish(&self->dv, base_addr, attribute, type, elem_len, rank, extents);
 
     /* Clean up */

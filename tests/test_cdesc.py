@@ -136,7 +136,6 @@ class TestCdescT:
         assert status == p.ifb.CFI_SUCCESS
         assert cdesc.dim[0].extent == 21  # 10 - (-10) + 1
 
-    @pytest.mark.skip(reason="Needs fixing")
     def test_deallocate(self):
         """Test deallocate function."""
         cdesc = p.ifb.CFI_cdesc_t(1)
@@ -151,7 +150,6 @@ class TestCdescT:
         assert status == p.ifb.CFI_SUCCESS
         # Note: base_addr may still be set after deallocate, depending on CFI implementation
 
-    @pytest.mark.skip(reason="Needs fixing")
     def test_establish(self):
         """Test establish function."""
         import ctypes
@@ -159,9 +157,8 @@ class TestCdescT:
         cdesc = p.ifb.CFI_cdesc_t(2)
 
         # Test establish with NULL base_addr using ctypes
-        null_ptr = ctypes.c_void_p(0)
         status = cdesc.establish(
-            ctypes.cast(null_ptr, ctypes.c_void_p).value,
+            None,
             p.ifb.CFI_attribute_other,
             p.ifb.CFI_type_int,
             4,
@@ -171,8 +168,8 @@ class TestCdescT:
 
         assert status == p.ifb.CFI_SUCCESS
         assert cdesc.rank == 2
-        assert cdesc.dim[0].extent == 2
-        assert cdesc.dim[1].extent == 3
+        # Extent is ignored when base address is NULL
+        assert cdesc.dim[0].extent == 0
 
     @pytest.mark.skip(reason="Needs fixing")
     def test_is_contiguous(self):
