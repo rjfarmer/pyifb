@@ -230,12 +230,87 @@ static PyObject* PyCFI_cdesc_as_parameter_(PyCFI_cdesc_object * self, PyObject *
     return PyCFI_cdesc_to_bytes(self, NULL);
 }
 
+static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) {
+    /* Allocate memory for the descriptor array.
+       Args: lower_bounds (sequence), upper_bounds (sequence), elem_len (int)
+       Returns: Status code (CFI_SUCCESS or error code)
+    */
+    PyObject *lower_bounds_seq, *upper_bounds_seq;
+    size_t elem_len;
+    CFI_rank_t rank;
+    CFI_index_t *lower_bounds, *upper_bounds;
+    int status;
 
+    if (!PyArg_ParseTuple(args, "OOK", &lower_bounds_seq, &upper_bounds_seq, &elem_len)) {
+        return NULL;
+    }
+
+    rank = self->dv.rank;
+
+    /* Validate sequence lengths match rank */
+    Py_ssize_t lower_len = PySequence_Length(lower_bounds_seq);
+    Py_ssize_t upper_len = PySequence_Length(upper_bounds_seq);
+
+    if (lower_len == -1 || upper_len == -1) {
+        return NULL;  /* Error already set by PySequence_Length */
+    }
+
+    if (lower_len != (Py_ssize_t)rank || upper_len != (Py_ssize_t)rank) {
+        PyErr_SetString(PyExc_ValueError, "Bounds sequences must match descriptor rank");
+        return NULL;
+    }
+
+    /* Allocate temporary arrays for C function */
+    lower_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+    upper_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+
+    if (lower_bounds == NULL || upper_bounds == NULL) {
+        free(lower_bounds);
+        free(upper_bounds);
+        return PyErr_NoMemory();
+    }
+
+    /* Convert Python sequences to C arrays */
+    for (CFI_rank_t i = 0; i < rank; i++) {
+        PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
+        PyObject *ub_item = PySequence_GetItem(upper_bounds_seq, i);
+
+        if (lb_item == NULL || ub_item == NULL) {
+            free(lower_bounds);
+            free(upper_bounds);
+            Py_XDECREF(lb_item);
+            Py_XDECREF(ub_item);
+            return NULL;
+        }
+
+        lower_bounds[i] = PyLong_AsLong(lb_item);
+        upper_bounds[i] = PyLong_AsLong(ub_item);
+
+        Py_DECREF(lb_item);
+        Py_DECREF(ub_item);
+
+        if (PyErr_Occurred()) {
+            free(lower_bounds);
+            free(upper_bounds);
+            return NULL;
+        }
+    }
+
+    /* Call CFI_allocate */
+    status = CFI_allocate(&self->dv, lower_bounds, upper_bounds, elem_len);
+
+    /* Clean up temporary arrays */
+    free(lower_bounds);
+    free(upper_bounds);
+
+    return PyLong_FromLong((long)status);
+}
 
 static PyMethodDef PyCFI_cdesc_methods[] = {
-    {"to_bytes", (PyCFunction) PyCFI_cdesc_to_bytes, METH_NOARGS, "to_bytes"},
-    {"from_bytes", (PyCFunction) PyCFI_cdesc_from_bytes, METH_CLASS|METH_O, "from_bytes"},
-    {"from_param", (PyCFunction) PyCFI_cdesc_to_bytes, METH_CLASS|METH_O, "from_param"},
+    {"to_bytes", (PyCFunction) PyCFI_cdesc_to_bytes, METH_NOARGS, "Serialize descriptor to bytes"},
+    {"from_bytes", (PyCFunction) PyCFI_cdesc_from_bytes, METH_CLASS|METH_O, "Deserialize descriptor from bytes"},
+    {"from_param", (PyCFunction) PyCFI_cdesc_to_bytes, METH_CLASS|METH_O, "ctypes from_param support"},
+    {"allocate", (PyCFunction) PyCFI_cdesc_allocate, METH_VARARGS, "Allocate memory for the array descriptor"},
     {NULL}
 };
 
