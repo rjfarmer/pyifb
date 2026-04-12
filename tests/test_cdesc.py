@@ -171,7 +171,6 @@ class TestCdescT:
         # Extent is ignored when base address is NULL
         assert cdesc.dim[0].extent == 0
 
-    @pytest.mark.skip(reason="Needs fixing")
     def test_is_contiguous(self):
         """Test is_contiguous function."""
         cdesc = p.ifb.CFI_cdesc_t(2)
