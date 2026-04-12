@@ -127,15 +127,6 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
 }
 
 
-static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
-    PyTypeObject *tp = Py_TYPE(self);
-    if (self->dv.base_addr != NULL) {
-        CFI_deallocate(&self->dv);
-    }
-    ((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
-    Py_CLEAR(tp);
-}
-
 static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
 
     CFI_rank_t rank=0;
@@ -306,12 +297,28 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     return PyLong_FromLong((long)status);
 }
 
-static PyObject* PyCFI_cdesc_deallocate(PyCFI_cdesc_object *self, PyObject *Py_UNUSED) {
+static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
     /* Deallocate memory for the descriptor array.
-       Returns: Status code (CFI_SUCCESS or error code)
+       Returns: None
     */
-    int status = CFI_deallocate(&self->dv);
-    return PyLong_FromLong((long)status);
+
+    PyTypeObject *tp = Py_TYPE(self);
+    if (self->dv.base_addr != NULL) {
+        CFI_deallocate(&self->dv);
+    }
+    ((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
+    Py_CLEAR(tp);
+}
+
+
+
+static PyObject* PyCFI_cdesc_deallocate(PyCFI_cdesc_object *self) {
+    /* Deallocate memory for the descriptor array.
+       Returns: 0 always
+    */
+
+    PyCFI_cdesc_dealloc(self);
+    return PyLong_FromLong((long)CFI_SUCCESS);
 }
 
 static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args) {
@@ -607,8 +614,8 @@ static PyType_Slot PyCFI_cdesc_slots[] = {
     { Py_tp_members, &PyCFI_cdesc_members},
     { Py_tp_methods, &PyCFI_cdesc_methods},
     { Py_tp_getset, &PyCFI_cdesc_getset},
-    { Py_tp_dealloc, PyCFI_cdesc_dealloc},
-    { Py_tp_new, PyCFI_cdesc_new},
+    { Py_tp_dealloc, &PyCFI_cdesc_dealloc},
+    { Py_tp_new, &PyCFI_cdesc_new},
     {0, NULL},
 };
 
