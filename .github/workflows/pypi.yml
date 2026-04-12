@@ -35,6 +35,8 @@ jobs:
       - name: Build wheels
         uses: pypa/cibuildwheel@8d2b08b68458a16aeb24b64e68a09ab1c8e82084 # v3.4.1
         env:
+          # Py_LIMITED_API / abi3 wheels are not supported on free-threaded CPython yet.
+          CIBW_SKIP: "cp3??t-*"
           MACOSX_DEPLOYMENT_TARGET: ${{ matrix.os == 'macos-14' && '14.0' || '' }}
 
 
