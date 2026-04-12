@@ -152,7 +152,11 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *
 
     PyCFI_cdesc_object *self;
     self = (PyCFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
+    if (self == NULL) {
+        return NULL;
+    }
 
+    memset(&self->dv, 0, sizeof(CFI_cdesc_t) + rank * sizeof(CFI_dim_t));
     self->dv.rank = rank;
     self->dv.base_addr = NULL;
 
@@ -244,6 +248,13 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
         return NULL;
     }
 
+    if (self->dv.version == 0) {
+        self->dv.version = CFI_VERSION;
+    }
+    if (self->dv.type == 0) {
+        self->dv.type = CFI_type_other;
+    }
+
     if (self->dv.attribute != CFI_attribute_allocatable && self->dv.attribute != CFI_attribute_pointer) {
         // If not set, default to allocatable
         self->dv.attribute = CFI_attribute_allocatable;
@@ -333,10 +344,9 @@ static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
 
     PyTypeObject *tp = Py_TYPE(self);
 
-    /* Guard against double free: only deallocate if base_addr is not NULL
-       and the descriptor represents an allocatable or pointer object */
-    if (self->dv.base_addr != NULL &&
-        (self->dv.attribute == CFI_attribute_allocatable || self->dv.attribute == CFI_attribute_pointer)) {
+    /* Guard against double free: only deallocate allocatable storage.
+       Pointer descriptors should not free memory owned by another descriptor. */
+    if (self->dv.base_addr != NULL && self->dv.attribute == CFI_attribute_allocatable) {
         CFI_deallocate(&self->dv);
         /* CFI_deallocate should set base_addr to NULL, but ensure it for safety */
         self->dv.base_addr = NULL;
@@ -738,41 +748,83 @@ static PyObject* PyCFI_cdesc_select_part(PyCFI_cdesc_object *self, PyObject *arg
 
 static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args) {
     /* Set this descriptor to point to another descriptor.
-       Args: source_desc (CFI_cdesc_t), lower_bounds (sequence, optional)
+       Args: source_desc (CFI_cdesc_t or None), lower_bounds (sequence, optional)
        Returns: Status code (CFI_SUCCESS or error code)
-       TODO: Fix this
     */
-    PyCFI_cdesc_object *source_desc;
+    PyObject *source_desc_obj;
     PyObject *lower_bounds_seq = NULL;
-    CFI_rank_t rank;
+    PyCFI_cdesc_object *source_desc = NULL;
+    CFI_rank_t source_rank = 0;
     CFI_index_t *lower_bounds = NULL;
     int status;
 
-    if (!PyArg_ParseTuple(args, "O|O", &source_desc, &lower_bounds_seq)) {
+    if (!PyArg_ParseTuple(args, "O|O", &source_desc_obj, &lower_bounds_seq)) {
         return NULL;
     }
 
-    rank = source_desc->dv.rank;
+    if (source_desc_obj != Py_None) {
+        if (!PyObject_TypeCheck(source_desc_obj, Py_TYPE(self))) {
+            PyErr_SetString(PyExc_TypeError, "source_desc must be a CFI_cdesc_t or None");
+            return NULL;
+        }
+        source_desc = (PyCFI_cdesc_object *) source_desc_obj;
+        source_rank = source_desc->dv.rank;
 
-    /* If lower_bounds provided, validate and convert */
-    if (lower_bounds_seq != NULL && lower_bounds_seq != Py_None) {
-        /* Validate lower_bounds sequence length */
+        if (source_desc->dv.attribute != CFI_attribute_other &&
+            source_desc->dv.attribute != CFI_attribute_allocatable &&
+            source_desc->dv.attribute != CFI_attribute_pointer) {
+            PyErr_SetString(PyExc_ValueError, "Source descriptor attribute must be CFI_attribute_other, CFI_attribute_allocatable, or CFI_attribute_pointer");
+            return NULL;
+        }
+
+        if (self->dv.rank != source_rank) {
+            PyErr_SetString(PyExc_ValueError, "Result descriptor rank must match source descriptor rank");
+            return NULL;
+        }
+
+        if (self->dv.elem_len == 0) {
+            self->dv.elem_len = source_desc->dv.elem_len;
+        } else if (self->dv.elem_len != source_desc->dv.elem_len) {
+            PyErr_SetString(PyExc_ValueError, "Result descriptor elem_len must match source descriptor elem_len");
+            return NULL;
+        }
+
+        if (self->dv.type == 0) {
+            self->dv.type = source_desc->dv.type;
+        } else if (self->dv.type != source_desc->dv.type) {
+            PyErr_SetString(PyExc_ValueError, "Result descriptor type must match source descriptor type");
+            return NULL;
+        }
+
+        if (self->dv.version == 0) {
+            self->dv.version = source_desc->dv.version;
+        } else if (self->dv.version != source_desc->dv.version) {
+            PyErr_SetString(PyExc_ValueError, "Result descriptor version must match source descriptor version");
+            return NULL;
+        }
+    }
+
+    if (self->dv.attribute != CFI_attribute_pointer) {
+        self->dv.attribute = CFI_attribute_pointer;
+    }
+
+    if (source_desc != NULL && source_rank > 0 &&
+        lower_bounds_seq != NULL && lower_bounds_seq != Py_None) {
         Py_ssize_t lower_len = PySequence_Length(lower_bounds_seq);
         if (lower_len == -1) {
             return NULL;
         }
-        if (lower_len != (Py_ssize_t)rank) {
-            PyErr_SetString(PyExc_ValueError, "lower_bounds sequence must match source descriptor rank");
+        if (lower_len < (Py_ssize_t)source_rank) {
+            PyErr_SetString(PyExc_ValueError, "lower_bounds sequence must have at least rank elements");
             return NULL;
         }
 
-        /* Allocate and convert lower_bounds */
-        lower_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+        lower_bounds = (CFI_index_t *)malloc(source_rank * sizeof(CFI_index_t));
         if (lower_bounds == NULL) {
             return PyErr_NoMemory();
         }
 
-        for (CFI_rank_t i = 0; i < rank; i++) {
+        for (CFI_rank_t i = 0; i < source_rank; i++) {
             PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
             if (lb_item == NULL) {
                 free(lower_bounds);
@@ -787,10 +839,10 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
         }
     }
 
-    /* Call CFI_setpointer */
-    status = CFI_setpointer(&self->dv, &source_desc->dv, lower_bounds);
+    status = CFI_setpointer(&self->dv,
+                            source_desc != NULL ? &source_desc->dv : NULL,
+                            lower_bounds);
 
-    /* Clean up */
     if (lower_bounds != NULL) {
         free(lower_bounds);
     }

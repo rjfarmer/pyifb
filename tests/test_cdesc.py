@@ -228,7 +228,6 @@ class TestCdescT:
         assert part.rank == 1
         assert part.dim[0].extent == 100  # Same number of elements
 
-    @pytest.mark.skip(reason="Needs fixing")
     def test_setpointer(self):
         """Test setpointer function."""
         cdesc1 = p.ifb.CFI_cdesc_t(2)
@@ -241,9 +240,7 @@ class TestCdescT:
         # Set second descriptor to point to first with explicit lower bounds
         status = cdesc2.setpointer(cdesc1, [1, 1])
 
-        # CFI_setpointer may not be implemented in all GCC versions
-        # Just check that it returns a status code (success or error)
-        assert isinstance(status, int)
+        assert status == p.ifb.CFI_SUCCESS
         # If it succeeds, check some properties
         if status == p.ifb.CFI_SUCCESS:
             assert cdesc2.rank == cdesc1.rank
