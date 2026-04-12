@@ -32,7 +32,6 @@ else:
         "-fvar-tracking-assignments",
         "-Wall",
         "-fstack-protector-all",
-        "-fcheck=all",
     ]
 
 
