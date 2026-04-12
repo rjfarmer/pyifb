@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=64", "wheel", "setuptools_scm[toml]>=8.0"]
+requires = ["setuptools>=80", "setuptools_scm[toml]>=9.2"]
 build-backend = "setuptools.build_meta"
 
 
@@ -32,6 +32,8 @@ dynamic = ["version"]
 
 [tool.setuptools]
 packages = ["pyifb"]
+
+[tool.setuptools_scm]
 
 
 [project.optional-dependencies]
