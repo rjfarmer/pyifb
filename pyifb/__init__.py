@@ -25,12 +25,14 @@ class CFI_cdesc:
         >>> array = cdesc.value  # Access as numpy array
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, rank=None, *args, **kwargs):
         """Initialize an empty CFI_cdesc wrapper.
 
         The internal C descriptor is not allocated until _new() or from_bytes() is called.
         """
         self._cfi = None
+        if rank is not None:
+            self._new(rank)
 
     def _new(self, rank):
         """Create a new C descriptor with the specified rank.
@@ -150,8 +152,28 @@ class CFI_cdesc:
 
     @value.setter
     def value(self, value):
-        """Placeholder setter for the value property."""
-        pass
+        if self._cfi is None:
+            return
+
+        if not isinstance(value, np.ndarray):
+            value = np.asarray(value)
+
+        if self._cfi.base_addr is None:
+            lower = [0] * value.ndim
+            upper = [s - 1 for s in value.shape]
+            self._cfi.allocate(lower, upper, value.itemsize)
+
+        shape = self.shape
+        if shape != 0 and value.shape != shape:
+            raise ValueError(f"Shape mismatch: expected {shape}, got {value.shape}")
+
+        try:
+            dtype = self.dtype
+        except (TypeError, KeyError):
+            dtype = None
+
+        src = np.asfortranarray(value.astype(dtype) if dtype is not None else value)
+        ctypes.memmove(self._cfi.base_addr, src.ctypes.data, src.nbytes)
 
     @property
     def rank(self):
