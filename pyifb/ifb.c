@@ -306,7 +306,9 @@ static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
     if (self->dv.base_addr != NULL) {
         CFI_deallocate(&self->dv);
     }
-    ((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
+    // Causes issues when deallocating?
+    // TODO: Fix this
+    //((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
     Py_CLEAR(tp);
 }
 
