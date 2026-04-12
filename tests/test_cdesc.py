@@ -182,7 +182,6 @@ class TestCdescT:
         # Should be contiguous
         assert cdesc.is_contiguous() == True
 
-    @pytest.mark.skip(reason="Needs fixing")
     def test_section(self):
         """Test section function."""
         cdesc = p.ifb.CFI_cdesc_t(2)
