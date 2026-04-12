@@ -38,7 +38,6 @@ jobs:
       - name: Build
         # Needs editable install for coverage to work
         run: |
-          python -m build
           python -m pip install -e .
         
       - name: Run coveralls
