@@ -11,7 +11,7 @@ extra_objects = []
 
 if os.environ.get("CC") == "icx":
     lib_dirs = [str(Path(os.environ.get("ONEAPI_ROOT"), "compilier", "latest", "lib"))]
-    args = ["-fortlib"]
+    args = ["-fortlib", "-O2"]
     link_args = ["-fortlib"]
 elif os.environ.get("CC") == "clang":
 
@@ -27,7 +27,7 @@ else:
     lib = ["gfortran"]
     args = [
         "-ggdb",
-        "-O",
+        "-O2",
         "-fno-eliminate-unused-debug-symbols",
         "-fvar-tracking-assignments",
         "-Wall",
