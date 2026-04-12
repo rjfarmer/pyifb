@@ -179,7 +179,7 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
 
     // Validate bytes size to prevent buffer overflow and ensure data integrity
     Py_ssize_t bytes_size = PyBytes_Size(arg);
-    if (bytes_size < sizeof(CFI_cdesc_t)) {
+    if (bytes_size < (Py_ssize_t)sizeof(CFI_cdesc_t)) {
         PyErr_SetString(PyExc_ValueError, "Bytes object too small");
         return NULL;
     }
@@ -191,7 +191,7 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
     memcpy(&rank, &bytes[offsetof(CFI_cdesc_t,rank)], sizeof(CFI_rank_t));
 
     size_t expected_size = sizeof(CFI_cdesc_t) + sizeof(CFI_dim_t) * rank;
-    if (bytes_size != expected_size) {
+    if (bytes_size != (Py_ssize_t)expected_size) {
         PyErr_SetString(PyExc_ValueError, "Invalid bytes size");
         return NULL;
     }

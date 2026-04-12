@@ -19,7 +19,7 @@
 #include "ISO_Fortran_binding.h"
 
 
-// Stupid compiliers grabbing __GNUC__
+// Stupid compilers grabbing __GNUC__
 
 #if defined(__GNUC__) && !defined(__llvm__) && !defined(__INTEL_COMPILER)
     #define REALLY_GCC   __GNUC__ 
@@ -75,25 +75,25 @@
     #define PyCFI_type_t Py_T_SHORT
 
     // int8
-    #define PyCFI_attrbute_t Py_T_CHAR
+    #define PyCFI_attribute_t Py_T_CHAR
     #define PyCFI_rank_t Py_T_CHAR
 
 #elif REALLY_ICX
     #if __SIZEOF_PTRDIFF_T__ == 8
         #define PyCFI_index_t Py_T_LONG
         #define PyCFI_type_t Py_T_LONG
-        #define PyCFI_attrbute_t Py_T_LONG
+        #define PyCFI_attribute_t Py_T_LONG
         #define PyCFI_rank_t Py_T_LONG
     #else
         #define PyCFI_index_t Py_T_INT
         #define PyCFI_type_t Py_T_INT
-        #define PyCFI_attrbute_t Py_T_INT
+        #define PyCFI_attribute_t Py_T_INT
         #define PyCFI_rank_t Py_T_INT
     #endif
 #else
     #define PyCFI_index_t Py_T_LONG
     #define PyCFI_type_t Py_T_LONG
-    #define PyCFI_attrbute_t Py_T_LONG
+    #define PyCFI_attribute_t Py_T_LONG
     #define PyCFI_rank_t Py_T_LONG
 #endif
 
