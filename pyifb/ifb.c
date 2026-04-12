@@ -306,11 +306,267 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     return PyLong_FromLong((long)status);
 }
 
+static PyObject* PyCFI_cdesc_deallocate(PyCFI_cdesc_object *self, PyObject *Py_UNUSED) {
+    /* Deallocate memory for the descriptor array.
+       Returns: Status code (CFI_SUCCESS or error code)
+    */
+    int status = CFI_deallocate(&self->dv);
+    return PyLong_FromLong((long)status);
+}
+
+static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args) {
+    /* Establish a descriptor with given properties.
+       Args: base_addr (void*), attribute (int), type (int), elem_len (int), rank (int), extents (sequence)
+       Returns: Status code (CFI_SUCCESS or error code)
+    */
+    PyObject *base_addr_obj, *extents_seq;
+    CFI_attribute_t attribute;
+    CFI_type_t type;
+    size_t elem_len;
+    CFI_rank_t rank;
+    CFI_index_t *extents;
+    void *base_addr;
+    int status;
+
+    if (!PyArg_ParseTuple(args, "OIIKIO", &base_addr_obj, &attribute, &type, &elem_len, &rank, &extents_seq)) {
+        return NULL;
+    }
+
+    /* Convert base_addr from Python object */
+    if (base_addr_obj == Py_None) {
+        base_addr = NULL;
+    } else if (PyLong_Check(base_addr_obj)) {
+        base_addr = PyLong_AsVoidPtr(base_addr_obj);
+    } else {
+        PyErr_SetString(PyExc_TypeError, "base_addr must be None or an integer");
+        return NULL;
+    }
+
+    /* Validate extents sequence length */
+    Py_ssize_t extents_len = PySequence_Length(extents_seq);
+    if (extents_len == -1) {
+        return NULL;
+    }
+    if (extents_len != (Py_ssize_t)rank) {
+        PyErr_SetString(PyExc_ValueError, "extents sequence must match rank");
+        return NULL;
+    }
+
+    /* Allocate and convert extents */
+    extents = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+    if (extents == NULL) {
+        return PyErr_NoMemory();
+    }
+
+    for (CFI_rank_t i = 0; i < rank; i++) {
+        PyObject *ext_item = PySequence_GetItem(extents_seq, i);
+        if (ext_item == NULL) {
+            free(extents);
+            return NULL;
+        }
+        extents[i] = PyLong_AsLong(ext_item);
+        Py_DECREF(ext_item);
+        if (PyErr_Occurred()) {
+            free(extents);
+            return NULL;
+        }
+    }
+
+    /* Call CFI_establish */
+    status = CFI_establish(&self->dv, base_addr, attribute, type, elem_len, rank, extents);
+
+    /* Clean up */
+    free(extents);
+
+    return PyLong_FromLong((long)status);
+}
+
+static PyObject* PyCFI_cdesc_is_contiguous(PyCFI_cdesc_object *self, PyObject *Py_UNUSED) {
+    /* Check if the array is contiguous in memory.
+       Returns: 1 if contiguous, 0 if not, -1 on error
+    */
+    int result = CFI_is_contiguous(&self->dv);
+    return PyLong_FromLong((long)result);
+}
+
+static PyObject* PyCFI_cdesc_section(PyCFI_cdesc_object *self, PyObject *args) {
+    /* Create a section/subarray of this descriptor.
+       Args: result_desc (CFI_cdesc_t), lower_bounds (sequence), upper_bounds (sequence), strides (sequence)
+       Returns: Status code (CFI_SUCCESS or error code)
+    */
+    PyCFI_cdesc_object *result_desc;
+    PyObject *lower_bounds_seq, *upper_bounds_seq, *strides_seq;
+    CFI_rank_t rank;
+    CFI_index_t *lower_bounds, *upper_bounds, *strides;
+    int status;
+
+    if (!PyArg_ParseTuple(args, "OOOO", &result_desc, &lower_bounds_seq, &upper_bounds_seq, &strides_seq)) {
+        return NULL;
+    }
+
+    rank = self->dv.rank;
+
+    /* Validate sequence lengths */
+    Py_ssize_t lower_len = PySequence_Length(lower_bounds_seq);
+    Py_ssize_t upper_len = PySequence_Length(upper_bounds_seq);
+    Py_ssize_t strides_len = PySequence_Length(strides_seq);
+
+    if (lower_len == -1 || upper_len == -1 || strides_len == -1) {
+        return NULL;
+    }
+
+    if (lower_len != (Py_ssize_t)rank || upper_len != (Py_ssize_t)rank || strides_len != (Py_ssize_t)rank) {
+        PyErr_SetString(PyExc_ValueError, "All bound sequences must match descriptor rank");
+        return NULL;
+    }
+
+    /* Allocate temporary arrays */
+    lower_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+    upper_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+    strides = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+
+    if (lower_bounds == NULL || upper_bounds == NULL || strides == NULL) {
+        free(lower_bounds);
+        free(upper_bounds);
+        free(strides);
+        return PyErr_NoMemory();
+    }
+
+    /* Convert Python sequences to C arrays */
+    for (CFI_rank_t i = 0; i < rank; i++) {
+        PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
+        PyObject *ub_item = PySequence_GetItem(upper_bounds_seq, i);
+        PyObject *str_item = PySequence_GetItem(strides_seq, i);
+
+        if (lb_item == NULL || ub_item == NULL || str_item == NULL) {
+            free(lower_bounds);
+            free(upper_bounds);
+            free(strides);
+            Py_XDECREF(lb_item);
+            Py_XDECREF(ub_item);
+            Py_XDECREF(str_item);
+            return NULL;
+        }
+
+        lower_bounds[i] = PyLong_AsLong(lb_item);
+        upper_bounds[i] = PyLong_AsLong(ub_item);
+        strides[i] = PyLong_AsLong(str_item);
+
+        Py_DECREF(lb_item);
+        Py_DECREF(ub_item);
+        Py_DECREF(str_item);
+
+        if (PyErr_Occurred()) {
+            free(lower_bounds);
+            free(upper_bounds);
+            free(strides);
+            return NULL;
+        }
+    }
+
+    /* Call CFI_section */
+    status = CFI_section(&result_desc->dv, &self->dv, lower_bounds, upper_bounds, strides);
+
+    /* Clean up */
+    free(lower_bounds);
+    free(upper_bounds);
+    free(strides);
+
+    return PyLong_FromLong((long)status);
+}
+
+static PyObject* PyCFI_cdesc_select_part(PyCFI_cdesc_object *self, PyObject *args) {
+    /* Select a part of a descriptor (for derived types).
+       Args: source_desc (CFI_cdesc_t), displacement (size_t), elem_len (size_t)
+       Returns: Status code (CFI_SUCCESS or error code)
+    */
+    PyCFI_cdesc_object *source_desc;
+    size_t displacement, elem_len;
+    int status;
+
+    if (!PyArg_ParseTuple(args, "OKK", &source_desc, &displacement, &elem_len)) {
+        return NULL;
+    }
+
+    // status = CFI_select_part(&self->dv, &source_desc->dv, displacement, elem_len);
+    status = CFI_INVALID_DESCRIPTOR;  // TODO: Fix this
+    return PyLong_FromLong((long)status);
+}
+
+static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args) {
+    /* Set this descriptor to point to another descriptor.
+       Args: source_desc (CFI_cdesc_t), lower_bounds (sequence, optional)
+       Returns: Status code (CFI_SUCCESS or error code)
+       TODO: Fix this
+    */
+    PyCFI_cdesc_object *source_desc;
+    PyObject *lower_bounds_seq = NULL;
+    CFI_rank_t rank;
+    CFI_index_t *lower_bounds = NULL;
+    int status;
+
+    if (!PyArg_ParseTuple(args, "O|O", &source_desc, &lower_bounds_seq)) {
+        return NULL;
+    }
+
+    rank = source_desc->dv.rank;
+
+    /* If lower_bounds provided, validate and convert */
+    if (lower_bounds_seq != NULL && lower_bounds_seq != Py_None) {
+        /* Validate lower_bounds sequence length */
+        Py_ssize_t lower_len = PySequence_Length(lower_bounds_seq);
+        if (lower_len == -1) {
+            return NULL;
+        }
+        if (lower_len != (Py_ssize_t)rank) {
+            PyErr_SetString(PyExc_ValueError, "lower_bounds sequence must match source descriptor rank");
+            return NULL;
+        }
+
+        /* Allocate and convert lower_bounds */
+        lower_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+        if (lower_bounds == NULL) {
+            return PyErr_NoMemory();
+        }
+
+        for (CFI_rank_t i = 0; i < rank; i++) {
+            PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
+            if (lb_item == NULL) {
+                free(lower_bounds);
+                return NULL;
+            }
+            lower_bounds[i] = PyLong_AsLong(lb_item);
+            Py_DECREF(lb_item);
+            if (PyErr_Occurred()) {
+                free(lower_bounds);
+                return NULL;
+            }
+        }
+    }
+
+    /* Call CFI_setpointer */
+    // TODO: Fix this 
+    status = CFI_INVALID_DESCRIPTOR;  // Not implemented
+
+    /* Clean up */
+    if (lower_bounds != NULL) {
+        free(lower_bounds);
+    }
+
+    return PyLong_FromLong((long)status);
+}
+
 static PyMethodDef PyCFI_cdesc_methods[] = {
     {"to_bytes", (PyCFunction) PyCFI_cdesc_to_bytes, METH_NOARGS, "Serialize descriptor to bytes"},
     {"from_bytes", (PyCFunction) PyCFI_cdesc_from_bytes, METH_CLASS|METH_O, "Deserialize descriptor from bytes"},
     {"from_param", (PyCFunction) PyCFI_cdesc_to_bytes, METH_CLASS|METH_O, "ctypes from_param support"},
     {"allocate", (PyCFunction) PyCFI_cdesc_allocate, METH_VARARGS, "Allocate memory for the array descriptor"},
+    {"deallocate", (PyCFunction) PyCFI_cdesc_deallocate, METH_NOARGS, "Deallocate memory for the array descriptor"},
+    {"establish", (PyCFunction) PyCFI_cdesc_establish, METH_VARARGS, "Establish a descriptor with given properties"},
+    {"is_contiguous", (PyCFunction) PyCFI_cdesc_is_contiguous, METH_NOARGS, "Check if the array is contiguous in memory"},
+    {"section", (PyCFunction) PyCFI_cdesc_section, METH_VARARGS, "Create a section/subarray of this descriptor"},
+    {"select_part", (PyCFunction) PyCFI_cdesc_select_part, METH_VARARGS, "Select a part of a descriptor (for derived types)"},
+    {"setpointer", (PyCFunction) PyCFI_cdesc_setpointer, METH_VARARGS, "Set this descriptor to point to another descriptor"},
     {NULL}
 };
 
