@@ -122,5 +122,4 @@ typedef struct {
 
 
 
-static PyObject* new_PyCFI_cdesc(PyObject* rank);
 static PyObject* new_PyCFI_dim();

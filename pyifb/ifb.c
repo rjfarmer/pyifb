@@ -113,11 +113,9 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
             Py_XDECREF(dims);
             return NULL;
         }
-        Py_INCREF(dim_obj);
         set_result = PyTuple_SetItem(dims, i, dim_obj);
         if(set_result != 0) {
             Py_XDECREF(dims);
-            Py_XDECREF(dim_obj);
             PyErr_SetString(PyExc_ValueError, "Error setting dimension");
             return NULL;
         }
@@ -196,15 +194,23 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
         return NULL;
     }
 
-    PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) new_PyCFI_cdesc(obj_rank);
-    if (self == NULL) {
+    PyObject *dims = PyTuple_New(1);
+    if (dims == NULL) {
         Py_DECREF(obj_rank);
+        return NULL;
+    }
+    if (PyTuple_SetItem(dims, 0, obj_rank) != 0) {  /* SetItem steals obj_rank ref */
+        Py_DECREF(dims);
+        return NULL;
+    }   /* obj_rank consumed */
+
+    PyCFI_cdesc_object* self = (PyCFI_cdesc_object*) PyObject_CallObject((PyObject *)type, dims);
+    Py_DECREF(dims);
+    if (self == NULL) {
         return NULL;
     }
 
     memcpy(&self->dv, bytes, bytes_size);
-
-    Py_DECREF(obj_rank);
 
     return (PyObject *) self;
 }
@@ -213,11 +219,15 @@ static PyObject* PyCFI_cdesc_to_bytes(PyCFI_cdesc_object *self, PyObject * Py_UN
 
     Py_ssize_t size = sizeof(CFI_cdesc_t) + sizeof(CFI_dim_t) * self->dv.rank;
 
-    char buffer[size];
+    char *buffer = (char *)malloc((size_t)size);
+    if (buffer == NULL) {
+        return PyErr_NoMemory();
+    }
 
-    memcpy(&buffer, &self->dv, size);
-
-    return PyBytes_FromStringAndSize(buffer, size);
+    memcpy(buffer, &self->dv, size);
+    PyObject *result = PyBytes_FromStringAndSize(buffer, size);
+    free(buffer);
+    return result;
 
 }
 
@@ -247,6 +257,11 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
         PyErr_SetString(PyExc_ValueError, "Descriptor base_addr must be NULL before allocate");
         return NULL;
     }
+
+    /* Save mutable fields in case CFI_allocate fails and we need to restore them */
+    int saved_version = self->dv.version;
+    CFI_type_t saved_type = self->dv.type;
+    CFI_attribute_t saved_attribute = self->dv.attribute;
 
     if (self->dv.version == 0) {
         self->dv.version = CFI_VERSION;
@@ -334,38 +349,37 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     free(lower_bounds);
     free(upper_bounds);
 
+    if (status != CFI_SUCCESS) {
+        /* Restore mutated fields so the descriptor is unchanged on failure */
+        self->dv.elem_len = 0;
+        self->dv.version = saved_version;
+        self->dv.type = saved_type;
+        self->dv.attribute = saved_attribute;
+    }
+
     return PyLong_FromLong((long)status);
 }
 
-static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
-    /* Deallocate memory for the descriptor array.
-       Returns: None
-    */
-
-    PyTypeObject *tp = Py_TYPE(self);
-
-    /* Guard against double free: only deallocate allocatable storage.
-       Pointer descriptors should not free memory owned by another descriptor. */
+static void _PyCFI_cdesc_free_fortran(PyCFI_cdesc_object *self) {
+    /* Free the Fortran array memory if this descriptor owns it (allocatable only). */
     if (self->dv.base_addr != NULL && self->dv.attribute == CFI_attribute_allocatable) {
         CFI_deallocate(&self->dv);
-        /* CFI_deallocate should set base_addr to NULL, but ensure it for safety */
         self->dv.base_addr = NULL;
     }
-
-    // Causes issues when deallocating?
-    // TODO: Fix this
-    //((freefunc)PyType_GetSlot(Py_TYPE(self), Py_tp_free))(self);
-    Py_CLEAR(tp);
 }
 
-
+static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
+    PyTypeObject *tp = Py_TYPE(self);
+    _PyCFI_cdesc_free_fortran(self);
+    PyObject_Free(self);
+    Py_DECREF(tp);
+}
 
 static PyObject* PyCFI_cdesc_deallocate(PyCFI_cdesc_object *self) {
-    /* Deallocate memory for the descriptor array.
-       Returns: 0 always
+    /* Deallocate the Fortran array memory; keeps the Python descriptor alive.
+       Returns: CFI_SUCCESS (0) always
     */
-
-    PyCFI_cdesc_dealloc(self);
+    _PyCFI_cdesc_free_fortran(self);
     return PyLong_FromLong((long)CFI_SUCCESS);
 }
 
@@ -804,6 +818,12 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
         }
     }
 
+    /* Save fields mutated before the call so they can be restored on failure */
+    size_t saved_sp_elem_len = self->dv.elem_len;
+    CFI_type_t saved_sp_type = self->dv.type;
+    int saved_sp_version = self->dv.version;
+    CFI_attribute_t saved_sp_attribute = self->dv.attribute;
+
     if (self->dv.attribute != CFI_attribute_pointer) {
         self->dv.attribute = CFI_attribute_pointer;
     }
@@ -845,6 +865,14 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
 
     if (lower_bounds != NULL) {
         free(lower_bounds);
+    }
+
+    if (status != CFI_SUCCESS) {
+        /* Restore mutated fields so the descriptor is unchanged on failure */
+        self->dv.elem_len = saved_sp_elem_len;
+        self->dv.type = saved_sp_type;
+        self->dv.version = saved_sp_version;
+        self->dv.attribute = saved_sp_attribute;
     }
 
     return PyLong_FromLong((long)status);
@@ -913,42 +941,6 @@ static PyType_Spec PyCFI_cdesc_spec = {
     .flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_HEAPTYPE,
     .slots = PyCFI_cdesc_slots,
 };
-
-
-static PyObject* new_PyCFI_cdesc(PyObject* rank){
-
-    PyObject *PyCFI_cdesc_type = PyType_FromSpec(&PyCFI_cdesc_spec);
-    if (PyCFI_cdesc_type == NULL) {
-        Py_XDECREF(PyCFI_cdesc_type);
-        return NULL;
-    }
-
-    PyObject *dims = PyTuple_New((Py_ssize_t) 1);
-    if(dims == NULL) {
-        Py_DECREF(PyCFI_cdesc_type);
-        Py_XDECREF(dims);
-        return NULL;
-    }
-
-    Py_INCREF(rank);
-    int res = PyTuple_SetItem(dims, 0, rank);
-    if(res!=0) {
-        Py_XDECREF(rank);
-        Py_DECREF(PyCFI_cdesc_type);
-        Py_XDECREF(dims);
-        PyErr_SetString(PyExc_ValueError, "Error setting up new dimension\n");
-        return NULL;
-    }
-
-    PyCFI_cdesc_object *out = (PyCFI_cdesc_object*) PyObject_CallObject(PyCFI_cdesc_type, dims);
-    Py_XDECREF(PyCFI_cdesc_type);
-    Py_XDECREF(dims);
-
-    return (PyObject*) out;
-
-}
-
-
 
 
 // END CFI_desc setup
