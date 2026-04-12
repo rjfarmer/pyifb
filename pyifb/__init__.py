@@ -61,7 +61,6 @@ class CFI_cdesc:
         if isinstance(b, bytearray):
             b = bytes(b)
 
-        print(b)
         self._cfi = ifb.CFI_cdesc_t.from_bytes(b)
         return self
 
@@ -100,15 +99,16 @@ class CFI_cdesc:
             CFI_cdesc: Populated descriptor object.
         """
         # Make something just big enough so we can pull the rank out
-        bytes = ctypes.c_ubyte * ifb._sizeof_cdesc
+        descriptor_bytes = ctypes.c_ubyte * ifb._sizeof_cdesc
         temp = cls()
-        rank = temp.from_bytes(bytes.in_dll(lib, name)).rank
+        rank = temp.from_bytes(descriptor_bytes.in_dll(lib, name)).rank
 
-        print(rank)
         # Get full sized object
-        bytes = ctypes.c_ubyte * (ifb._sizeof_cdesc + (ifb._sizeof_dims * rank))
+        descriptor_bytes = ctypes.c_ubyte * (
+            ifb._sizeof_cdesc + (ifb._sizeof_dims * rank)
+        )
         temp = cls()
-        temp = temp.from_bytes(bytes.in_dll(lib, name))
+        temp = temp.from_bytes(descriptor_bytes.in_dll(lib, name))
 
         return temp
 
@@ -131,7 +131,7 @@ class CFI_cdesc:
         if self._cfi.base_addr is None:
             return None
 
-        shape = self.shape()
+        shape = self.shape
 
         ctype = self.ctype
         if ctype is None:
@@ -223,7 +223,7 @@ class CFI_cdesc:
 
 
 _cfi_tuple = namedtuple(
-    "_cfi_tuple", ("name, ctype, pytype, dtype"), defaults=(None, None, None)
+    "_cfi_tuple", ("name", "ctype", "pytype", "dtype"), defaults=(None, None, None)
 )
 
 _map_cfi_type = {
