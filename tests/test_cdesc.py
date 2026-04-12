@@ -89,10 +89,14 @@ class TestCdescT:
         cdesc = p.ifb.CFI_cdesc_t(2)
 
         # Provide mismatched number of bounds
-        with pytest.raises(ValueError, match="Bounds sequences must match"):
+        with pytest.raises(
+            ValueError, match="Bounds sequences must have at least rank elements"
+        ):
             cdesc.allocate([1], [10, 20], 8)
 
-        with pytest.raises(ValueError, match="Bounds sequences must match"):
+        with pytest.raises(
+            ValueError, match="Bounds sequences must have at least rank elements"
+        ):
             cdesc.allocate([1, 1], [10], 8)
 
     def test_allocate_invalid_sequences(self):
@@ -180,7 +184,7 @@ class TestCdescT:
         assert status == p.ifb.CFI_SUCCESS
 
         # Should be contiguous
-        assert cdesc.is_contiguous() == True
+        assert cdesc.is_contiguous()
 
     def test_section(self):
         """Test section function."""
@@ -201,7 +205,6 @@ class TestCdescT:
         assert section.dim[0].extent == 4  # 5-2+1
         assert section.dim[1].extent == 6  # 10-5+1
 
-    @pytest.mark.skip(reason="Needs fixing")
     def test_select_part(self):
         """Test select_part function."""
         cdesc = p.ifb.CFI_cdesc_t(1)
@@ -211,8 +214,14 @@ class TestCdescT:
         assert status == p.ifb.CFI_SUCCESS
 
         # Select a part (e.g., second field at offset 8, size 4)
-        part = p.ifb.CFI_cdesc_t(0)  # Result might be scalar
-        status = part.select_part(cdesc, 8, 4)
+        part = p.ifb.CFI_cdesc_t(1)  # Same rank as source
+        # Establish the result descriptor with appropriate properties
+        status = part.establish(
+            None, p.ifb.CFI_attribute_other, p.ifb.CFI_type_int, 4, 1, [100]
+        )
+        assert status == p.ifb.CFI_SUCCESS
+
+        status = cdesc.select_part(part, 8, 4)
 
         assert status == p.ifb.CFI_SUCCESS
         # The result should have the same rank as the source for array elements

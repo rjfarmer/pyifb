@@ -238,6 +238,35 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
 
     rank = self->dv.rank;
 
+    /* Validate descriptor state */
+    if (self->dv.base_addr != NULL) {
+        PyErr_SetString(PyExc_ValueError, "Descriptor base_addr must be NULL before allocate");
+        return NULL;
+    }
+
+    if (self->dv.attribute != CFI_attribute_allocatable && self->dv.attribute != CFI_attribute_pointer) {
+        // If not set, default to allocatable
+        self->dv.attribute = CFI_attribute_allocatable;
+    }
+
+    /* Validate elem_len based on type */
+    int is_character_type = (self->dv.type == CFI_type_char);
+    if (is_character_type) {
+        if (elem_len < 1) {
+            PyErr_SetString(PyExc_ValueError, "For character types, elem_len must be at least 1");
+            return NULL;
+        }
+    } else {
+        // For non-character, elem_len should be positive
+        if (elem_len == 0) {
+            PyErr_SetString(PyExc_ValueError, "elem_len must be positive");
+            return NULL;
+        }
+    }
+
+    /* Set elem_len in descriptor */
+    self->dv.elem_len = elem_len;
+
     /* Validate sequence lengths match rank */
     Py_ssize_t lower_len = PySequence_Length(lower_bounds_seq);
     Py_ssize_t upper_len = PySequence_Length(upper_bounds_seq);
@@ -246,8 +275,8 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
         return NULL;  /* Error already set by PySequence_Length */
     }
 
-    if (lower_len != (Py_ssize_t)rank || upper_len != (Py_ssize_t)rank) {
-        PyErr_SetString(PyExc_ValueError, "Bounds sequences must match descriptor rank");
+    if (lower_len < (Py_ssize_t)rank || upper_len < (Py_ssize_t)rank) {
+        PyErr_SetString(PyExc_ValueError, "Bounds sequences must have at least rank elements");
         return NULL;
     }
 
@@ -418,7 +447,6 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     }
 
     /* Call CFI_establish */
-    printf("Extents: %d %d\n", (int)extents[0], (int)extents[1]);
     status = CFI_establish(&self->dv, base_addr, attribute, type, elem_len, rank, extents);
 
     /* Clean up */
@@ -427,12 +455,12 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     return PyLong_FromLong((long)status);
 }
 
-static PyObject* PyCFI_cdesc_is_contiguous(PyCFI_cdesc_object *self, PyObject *Py_UNUSED) {
+static PyObject* PyCFI_cdesc_is_contiguous(PyCFI_cdesc_object *self) {
     /* Check if the array is contiguous in memory.
        Returns: 1 if contiguous, 0 if not, -1 on error
     */
     int result = CFI_is_contiguous(&self->dv);
-    return PyLong_FromLong((long)result);
+    return result == 1 ? Py_True : Py_False;
 }
 
 static PyObject* PyCFI_cdesc_section(PyCFI_cdesc_object *self, PyObject *args) {
@@ -639,19 +667,72 @@ static PyObject* PyCFI_cdesc_section(PyCFI_cdesc_object *self, PyObject *args) {
 
 static PyObject* PyCFI_cdesc_select_part(PyCFI_cdesc_object *self, PyObject *args) {
     /* Select a part of a descriptor (for derived types).
-       Args: source_desc (CFI_cdesc_t), displacement (size_t), elem_len (size_t)
+       Args: result_desc (CFI_cdesc_t), displacement (size_t), elem_len (size_t)
        Returns: Status code (CFI_SUCCESS or error code)
     */
-    PyCFI_cdesc_object *source_desc;
+    PyCFI_cdesc_object *result_desc;
     size_t displacement, elem_len;
     int status;
 
-    if (!PyArg_ParseTuple(args, "OKK", &source_desc, &displacement, &elem_len)) {
+    if (!PyArg_ParseTuple(args, "OKK", &result_desc, &displacement, &elem_len)) {
         return NULL;
     }
 
-    // status = CFI_select_part(&self->dv, &source_desc->dv, displacement, elem_len);
-    status = CFI_INVALID_DESCRIPTOR;  // TODO: Fix this
+    /* Validate source descriptor (self) */
+    if (self->dv.base_addr == NULL) {
+        PyErr_SetString(PyExc_ValueError, "Source descriptor base_addr must not be NULL");
+        return NULL;
+    }
+    if (self->dv.attribute != CFI_attribute_other &&
+        self->dv.attribute != CFI_attribute_allocatable &&
+        self->dv.attribute != CFI_attribute_pointer) {
+        PyErr_SetString(PyExc_ValueError, "Source descriptor attribute must be other, allocatable, or pointer");
+        return NULL;
+    }
+
+    /* Validate displacement */
+    if (displacement >= self->dv.elem_len) {
+        PyErr_SetString(PyExc_ValueError, "Displacement must be less than source elem_len");
+        return NULL;
+    }
+
+    /* Validate result descriptor */
+    if (!PyObject_TypeCheck(result_desc, Py_TYPE(self))) {
+        PyErr_SetString(PyExc_TypeError, "result_desc must be a CFI_cdesc_t");
+        return NULL;
+    }
+
+    PyCFI_cdesc_object *res = (PyCFI_cdesc_object *)result_desc;
+
+    /* Validate result descriptor rank matches source rank */
+    if (res->dv.rank != self->dv.rank) {
+        PyErr_SetString(PyExc_ValueError, "Result descriptor rank must match source descriptor rank");
+        return NULL;
+    }
+
+    /* Validate result descriptor attribute */
+    if (res->dv.attribute != CFI_attribute_other && res->dv.attribute != CFI_attribute_pointer) {
+        PyErr_SetString(PyExc_ValueError, "Result descriptor attribute must be CFI_attribute_other or CFI_attribute_pointer");
+        return NULL;
+    }
+
+    /* Validate result descriptor elem_len */
+    int is_character_type = (res->dv.type == CFI_type_char);
+    if (is_character_type) {
+        if (elem_len < 1 || elem_len > self->dv.elem_len) {
+            PyErr_SetString(PyExc_ValueError, "For character types, elem_len must be between 1 and source elem_len");
+            return NULL;
+        }
+    } else {
+        // For non-character types, elem_len should match the parameter
+        if (res->dv.elem_len != elem_len) {
+            PyErr_SetString(PyExc_ValueError, "Result elem_len must match provided elem_len");
+            return NULL;
+        }
+    }
+
+    status = CFI_select_part(&res->dv, &self->dv, displacement, elem_len);
+
     return PyLong_FromLong((long)status);
 }
 
@@ -707,8 +788,7 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
     }
 
     /* Call CFI_setpointer */
-    // TODO: Fix this 
-    status = CFI_INVALID_DESCRIPTOR;  // Not implemented
+    status = CFI_setpointer(&self->dv, &source_desc->dv, lower_bounds);
 
     /* Clean up */
     if (lower_bounds != NULL) {
