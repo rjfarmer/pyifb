@@ -8,13 +8,7 @@ import ctypes
 from collections import namedtuple
 from typing import Any, Type
 
-# Byte offset of the rank field inside CFI_cdesc_t.
-# Layout: void* base_addr + size_t elem_len + int version + int8_t rank
-_RANK_OFFSET: int = (
-    ctypes.sizeof(ctypes.c_void_p)
-    + ctypes.sizeof(ctypes.c_size_t)
-    + ctypes.sizeof(ctypes.c_int)
-)
+_CDESC_OFFSETS: dict[str, int] = ifb._offsetof_cdesc()
 
 __all__ = ["CFI_cdesc", "ifb"]
 
@@ -120,7 +114,7 @@ class CFI_cdesc:
         header_type = ctypes.c_ubyte * ifb._sizeof_cdesc
         raw_header = header_type.in_dll(lib, name)
         header_bytes = bytes([raw_header[i] for i in range(ifb._sizeof_cdesc)])
-        rank = struct.unpack_from("b", header_bytes, _RANK_OFFSET)[0]
+        rank = struct.unpack_from("b", header_bytes, _CDESC_OFFSETS["rank"])[0]
 
         # Now read the full descriptor including dim entries.
         full_size = ifb._sizeof_cdesc + ifb._sizeof_dims * rank

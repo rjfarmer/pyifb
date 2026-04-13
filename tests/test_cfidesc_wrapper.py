@@ -98,6 +98,11 @@ class TestSerialize:
 
 
 class TestInDll:
+    @pytest.fixture(autouse=True)
+    def test_setup(self):
+        """Helper library should have a symbol "cdesc_rank1" (lines 108-109)."""
+        _helper_lib.setup()
+
     def test_in_dll_rank(self):
         """in_dll reads the rank from a library symbol (lines 108-119)."""
         cdesc = p.CFI_cdesc.in_dll(_helper_lib, "cdesc_rank1")

@@ -46,6 +46,18 @@ class TestCdescT:
 
         assert a.rank == 5
 
+    def test_offsets(self):
+        offsets = p.ifb._offsetof_cdesc()
+
+        assert offsets["base_addr"] == 0
+        assert offsets["base_addr"] < offsets["elem_len"]
+        assert offsets["elem_len"] < offsets["version"]
+        assert offsets["version"] <= offsets["rank"]
+        assert offsets["rank"] <= offsets["attribute"]
+        assert offsets["attribute"] <= offsets["type"]
+        assert offsets["type"] <= offsets["dim"]
+        assert offsets["dim"] <= p.ifb._sizeof_cdesc
+
     def test_allocate_rank1(self):
         """Test allocate for a rank-1 descriptor."""
         cdesc = p.ifb.CFI_cdesc_t(1)

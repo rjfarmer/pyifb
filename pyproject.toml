@@ -41,7 +41,7 @@ test = ['pytest']
 coverage = ['pytest', 'pytest-cov']
 dev = ['pre-commit','black', 'pytest', 'mypy']
 perfomance = ["pytest", "pytest-codspeed"]
-types = ['mypy']
+types = ['mypy','types-setuptools']
 
 [tool.pytest.ini_options]
 addopts = "-s"

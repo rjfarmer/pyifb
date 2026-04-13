@@ -947,6 +947,48 @@ static PyType_Spec PyCFI_cdesc_spec = {
 /////////////////////////////////////////////////////////
 
 
+static PyObject* PyIFB_offsetof_cdesc(PyObject *Py_UNUSED(self), PyObject *Py_UNUSED(args)) {
+    static const struct {
+        const char *name;
+        size_t offset;
+    } cdesc_offsets[] = {
+        {"base_addr", offsetof(CFI_cdesc_t, base_addr)},
+        {"elem_len", offsetof(CFI_cdesc_t, elem_len)},
+        {"version", offsetof(CFI_cdesc_t, version)},
+        {"rank", offsetof(CFI_cdesc_t, rank)},
+        {"attribute", offsetof(CFI_cdesc_t, attribute)},
+        {"type", offsetof(CFI_cdesc_t, type)},
+        {"dim", offsetof(CFI_cdesc_t, dim)},
+    };
+
+    PyObject *offsets = PyDict_New();
+    if (offsets == NULL) {
+        return NULL;
+    }
+
+    for (size_t i = 0; i < sizeof(cdesc_offsets) / sizeof(cdesc_offsets[0]); i++) {
+        PyObject *value = PyLong_FromSize_t(cdesc_offsets[i].offset);
+        if (value == NULL) {
+            Py_DECREF(offsets);
+            return NULL;
+        }
+        if (PyDict_SetItemString(offsets, cdesc_offsets[i].name, value) != 0) {
+            Py_DECREF(value);
+            Py_DECREF(offsets);
+            return NULL;
+        }
+        Py_DECREF(value);
+    }
+
+    return offsets;
+}
+
+static PyMethodDef IFBModule_methods[] = {
+    {"_offsetof_cdesc", (PyCFunction) PyIFB_offsetof_cdesc, METH_NOARGS,
+        PyDoc_STR("Return the offsetof values for CFI_cdesc_t fields")},
+    {NULL}
+};
+
 
 static int add_constants(PyObject *m){
 
@@ -1307,6 +1349,7 @@ PyModuleDef IFBModule = {
     .m_name = "ifb",
     .m_doc = PyDoc_STR("Bindings for ISO_Fortran_binding.h"),
     .m_size = 0,
+    .m_methods = IFBModule_methods,
 #ifdef Py_mod_exec
     .m_slots = IFBModule_slots,
 #endif
