@@ -10,7 +10,9 @@ link_args = []
 extra_objects = []
 
 if os.environ.get("CC") == "icx":
-    lib_dirs = [str(Path(os.environ.get("ONEAPI_ROOT"), "compilier", "latest", "lib"))]
+    oneapi_root = os.environ.get("ONEAPI_ROOT")
+    if oneapi_root is not None:
+        lib_dirs = [str(Path(oneapi_root, "compilier", "latest", "lib"))]
     args = ["-fortlib", "-O2"]
     link_args = ["-fortlib"]
 elif os.environ.get("CC") == "clang":

@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0+
 from __future__ import annotations
 
-from . import ifb
+from . import ifb  # type: ignore[attr-defined]
 import struct
 import numpy as np
 import ctypes
 from collections import namedtuple
-from typing import Any
+from typing import Any, Type
 
 # Byte offset of the rank field inside CFI_cdesc_t.
 # Layout: void* base_addr + size_t elem_len + int version + int8_t rank
@@ -16,7 +16,7 @@ _RANK_OFFSET: int = (
     + ctypes.sizeof(ctypes.c_int)
 )
 
-__all__ = ["CFI_cdesc"]
+__all__ = ["CFI_cdesc", "ifb"]
 
 
 class CFI_cdesc:
@@ -87,6 +87,7 @@ class CFI_cdesc:
         """
         if self._cfi is not None:
             return self._cfi.to_bytes()
+        return None
 
     @property
     def _as_parameter_(self) -> bytes | None:
@@ -97,6 +98,7 @@ class CFI_cdesc:
         """
         if self._cfi is not None:
             return self._cfi._as_parameter
+        return None
 
     @classmethod
     def in_dll(cls, lib: ctypes.CDLL, name: str) -> CFI_cdesc:
@@ -153,7 +155,9 @@ class CFI_cdesc:
 
         ctype = self.ctype
         if ctype is None:
-            raise TypeError(f"Can't map to ctype {self.type.name}")
+            cfi_type = self.type
+            type_name = cfi_type.name if cfi_type is not None else "unknown"
+            raise TypeError(f"Can't map to ctype {type_name}")
 
         PTR = ctypes.POINTER(self.ctype)
         x_ptr = ctypes.cast(self._cfi.base_addr, PTR)
@@ -196,36 +200,42 @@ class CFI_cdesc:
         """int: Number of dimensions (0 for scalar, >0 for array)."""
         if self._cfi is not None:
             return self._cfi.rank
+        return None
 
     @property
     def attribute(self) -> int | None:
         """int: Attribute code (allocatable, pointer, or other)."""
         if self._cfi is not None:
             return self._cfi.attribute
+        return None
 
     @property
     def dim(self) -> tuple[Any, ...] | None:
         """tuple or None: Dimension objects containing lower_bound, extent, and stride info."""
         if self._cfi is not None:
             return self._cfi.dim
+        return None
 
     @property
     def elem_len(self) -> int | None:
         """int: Size of one array element in bytes."""
         if self._cfi is not None:
             return self._cfi.elem_len
+        return None
 
     @property
     def type(self) -> _cfi_tuple | None:
         """NamedTuple: Type information (name, ctype, pytype, dtype)."""
         if self._cfi is not None:
             return _map_cfi_type[self._cfi.type]
+        return None
 
     @property
     def version(self) -> int | None:
         """int: CFI version of the descriptor."""
         if self._cfi is not None:
             return self._cfi.version
+        return None
 
     @property
     def shape(self) -> int | tuple[int, ...] | None:
@@ -234,30 +244,41 @@ class CFI_cdesc:
             if self.rank == 0:
                 return 0
             return tuple([i.extent for i in self._cfi.dim])
+        return None
 
     @property
     def size(self) -> int | None:
         """int: Total number of elements in the array."""
-        if self._cfi is not None:
-            return np.prod(self.shape)
+        shape = self.shape
+        if shape is None:
+            return None
+        if shape == 0:
+            return 0
+        return int(np.prod(shape))
 
     @property
-    def pytype(self) -> type[Any] | None:
+    def pytype(self) -> Type[Any] | None:
         """type: Python type corresponding to the element type (int, float, bool, etc)."""
-        if self._cfi is not None:
-            return self.type.pytype
+        cfi_type = self.type
+        if cfi_type is not None:
+            return cfi_type.pytype
+        return None
 
     @property
     def dtype(self) -> np.dtype[Any] | str | None:
         """numpy.dtype or str or None: NumPy dtype for the element type."""
-        if self._cfi is not None:
-            return self.type.dtype
+        cfi_type = self.type
+        if cfi_type is not None:
+            return cfi_type.dtype
+        return None
 
     @property
-    def ctype(self) -> type[Any] | None:
+    def ctype(self) -> Type[Any] | None:
         """ctypes type: ctypes representation of the element type for C interop."""
-        if self._cfi is not None:
-            return self.type.ctype
+        cfi_type = self.type
+        if cfi_type is not None:
+            return cfi_type.ctype
+        return None
 
 
 _cfi_tuple = namedtuple(
