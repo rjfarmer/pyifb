@@ -155,6 +155,7 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *
     }
 
     memset(&self->dv, 0, sizeof(CFI_cdesc_t) + rank * sizeof(CFI_dim_t));
+    self->owns_memory = false;
     self->dv.rank = rank;
     self->dv.base_addr = NULL;
 
@@ -211,6 +212,7 @@ static PyObject* PyCFI_cdesc_from_bytes(PyTypeObject *type, PyObject * arg){
     }
 
     memcpy(&self->dv, bytes, bytes_size);
+    self->owns_memory = false;
 
     return (PyObject *) self;
 }
@@ -262,6 +264,7 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     int saved_version = self->dv.version;
     CFI_type_t saved_type = self->dv.type;
     CFI_attribute_t saved_attribute = self->dv.attribute;
+    bool saved_owns_memory = self->owns_memory;
 
     if (self->dv.version == 0) {
         self->dv.version = CFI_VERSION;
@@ -355,6 +358,9 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
         self->dv.version = saved_version;
         self->dv.type = saved_type;
         self->dv.attribute = saved_attribute;
+        self->owns_memory = saved_owns_memory;
+    } else {
+        self->owns_memory = true;
     }
 
     return PyLong_FromLong((long)status);
@@ -362,9 +368,10 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
 
 static void _PyCFI_cdesc_free_fortran(PyCFI_cdesc_object *self) {
     /* Free the Fortran array memory if this descriptor owns it (allocatable only). */
-    if (self->dv.base_addr != NULL && self->dv.attribute == CFI_attribute_allocatable) {
+    if (self->owns_memory && self->dv.base_addr != NULL && self->dv.attribute == CFI_attribute_allocatable) {
         CFI_deallocate(&self->dv);
         self->dv.base_addr = NULL;
+        self->owns_memory = false;
     }
 }
 
@@ -475,6 +482,10 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
 
     /* Clean up */
     free(extents);
+
+    if (status == CFI_SUCCESS) {
+        self->owns_memory = false;
+    }
 
     return PyLong_FromLong((long)status);
 }
@@ -686,6 +697,10 @@ static PyObject* PyCFI_cdesc_section(PyCFI_cdesc_object *self, PyObject *args) {
     free(upper_bounds);
     free(strides);
 
+    if (status == CFI_SUCCESS) {
+        result_desc->owns_memory = false;
+    }
+
     return PyLong_FromLong((long)status);
 }
 
@@ -756,6 +771,10 @@ static PyObject* PyCFI_cdesc_select_part(PyCFI_cdesc_object *self, PyObject *arg
     }
 
     status = CFI_select_part(&res->dv, &self->dv, displacement, elem_len);
+
+    if (status == CFI_SUCCESS) {
+        res->owns_memory = false;
+    }
 
     return PyLong_FromLong((long)status);
 }
@@ -873,6 +892,8 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
         self->dv.type = saved_sp_type;
         self->dv.version = saved_sp_version;
         self->dv.attribute = saved_sp_attribute;
+    } else {
+        self->owns_memory = false;
     }
 
     return PyLong_FromLong((long)status);

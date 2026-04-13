@@ -119,6 +119,7 @@ typedef struct {
 
 typedef struct {
     PyObject_VAR_HEAD
+    bool owns_memory;
     CFI_cdesc_t dv;
 } PyCFI_cdesc_object;
 

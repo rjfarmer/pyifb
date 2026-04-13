@@ -2,6 +2,7 @@
 """Tests for the high-level CFI_cdesc Python wrapper (pyifb/__init__.py)."""
 
 import ctypes
+import gc
 from pathlib import Path
 
 import numpy as np
@@ -117,6 +118,19 @@ class TestInDll:
         """in_dll descriptor has accessible data values."""
         cdesc = p.CFI_cdesc.in_dll(_helper_lib, "cdesc_rank1")
         result = cdesc.value
+        assert result is not None
+        assert result.tolist() == [10, 20, 30]
+
+    def test_in_dll_does_not_free_helper_storage(self):
+        first = p.CFI_cdesc.in_dll(_helper_lib, "cdesc_rank1")
+        assert first.value is not None
+        assert first.value.tolist() == [10, 20, 30]
+
+        del first
+        gc.collect()
+
+        second = p.CFI_cdesc.in_dll(_helper_lib, "cdesc_rank1")
+        result = second.value
         assert result is not None
         assert result.tolist() == [10, 20, 30]
 
