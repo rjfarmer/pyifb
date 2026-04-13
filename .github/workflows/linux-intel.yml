@@ -41,13 +41,16 @@ jobs:
     
       - name: Build
         run: |
-          export CC=icx
           python -m build
           python -m pip install dist/pyifb*.whl
+        env:
+          CC: icx
 
   
       - name: Test
         # Don't use python -m pytest as that screws up the module loading
         run: |
           pytest -v
+        env:
+          CC: icx
 

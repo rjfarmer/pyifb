@@ -33,6 +33,7 @@ jobs:
     
       - name: Build
         run: |
+          export CC=gcc
           python -m build
           python -m pip install dist/pyifb*.whl
 

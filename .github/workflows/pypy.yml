@@ -39,6 +39,7 @@ jobs:
     
       - name: Build
         run: |
+          export CC=gcc
           pypy3 -m build
           pypy3 -m pip install dist/pyifb*.whl
 
