@@ -71,8 +71,6 @@ static PyMemberDef PyCFI_cdesc_members[] = {
         PyDoc_STR("If the object is scalar, the value is the storage size in bytes of the object; otherwise, the value is the storage size in bytes of an element of the object")},
     {"type",PyCFI_type_t,offsetof(PyCFI_cdesc_object,dv.type),Py_READONLY,
         PyDoc_STR("The value is equal to the specifier for the type of the object.")},
-    {"version",Py_T_INT,offsetof(PyCFI_cdesc_object,dv.version),Py_READONLY,
-        PyDoc_STR("The value is equal to the value of CFI VERSION in the ISO_Fortran_binding.h header file that defined the format and meaning of this C descriptor when the descriptor was established.")},
         {NULL}  /* Sentinel */
 };
 
@@ -90,6 +88,10 @@ static PyObject* PyCFI_cdesc_rank_get(PyCFI_cdesc_object* self, void* Py_UNUSED)
 
 static PyObject* PyCFI_cdesc_attribute_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     return PyLong_FromLong((long) self->dv.attribute);
+}
+
+static PyObject* PyCFI_cdesc_version_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
+    return PyLong_FromUnsignedLong((unsigned int) self->dv.version);
 }
 
 static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
@@ -931,6 +933,11 @@ static PyGetSetDef PyCFI_cdesc_getset[] = {
         .doc = PyDoc_STR("The value is equal to the value of an attribute code that indicates whether the object described is allocatable, a data pointer, or a nonallocatable nonpointer data object.")
     },
     {
+        .name = "version",
+        .get = (getter) PyCFI_cdesc_version_get,
+        .doc = PyDoc_STR("The value is equal to the value of CFI VERSION in the ISO_Fortran_binding.h header file that defined the format and meaning of this C descriptor when the descriptor was established.")
+    },
+    {
         .name = "dim",
         .get = (getter) PyCFI_cdesc_dim_get,
         .doc = PyDoc_STR("The number of elements in the dim array is equal to the rank of the object. Each element of the array contains the lower bound, extent, and memory stride information for the corresponding dimension of the Fortran object.")
@@ -1068,6 +1075,18 @@ static int add_constants(PyObject *m){
     if (PyModule_AddIntConstant(m, "_sizeof_dims", sizeof(CFI_dim_t))) {
         return 1;
     } 
+
+    if (PyModule_AddIntConstant(m, "_sizeof_cfi_rank_t", sizeof(CFI_rank_t))) {
+        return 1;
+    }
+
+    if (PyModule_AddIntConstant(m, "_sizeof_cfi_attribute_t", sizeof(CFI_attribute_t))) {
+        return 1;
+    }
+
+    if (PyModule_AddIntConstant(m, "_sizeof_cfi_type_t", sizeof(CFI_type_t))) {
+        return 1;
+    }
 
 
     return 0;

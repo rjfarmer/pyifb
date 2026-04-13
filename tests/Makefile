@@ -1,6 +1,7 @@
 
 .PHONY = all clean
 
+CC ?= gcc
 FC = gfortran
 
 OPTIONS=-ggdb -D_FORTIFY_SOURCE=2 -ffree-line-length-none  -ffree-form -fstack-clash-protection -fstack-protector-all -fstack-protector
@@ -39,10 +40,16 @@ endif
 
 C_HELPERS = cdesc_test_helper.$(LIB_SUFFIX)
 
+ifeq ($(CC),icx)
+   C_HELPER_LIBS = -fortlib
+else
+   C_HELPER_LIBS = -lgfortran
+endif
+
 all: $(LIBS) $(C_HELPERS) $(GZ)
 
 cdesc_test_helper.$(LIB_SUFFIX): cdesc_test_helper.c
-	gcc $(LIB_FLAGS) -lgfortran -I.. -o $@ $<
+	$(CC) $(LIB_FLAGS) $(C_HELPER_LIBS) -I.. -o $@ $<
 
 %.$(LIB_SUFFIX): %.f90
 	$(FC) $(OPTIONS) $(LIB_FLAGS) -cpp -o  $@ $<

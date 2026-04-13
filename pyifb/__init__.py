@@ -2,13 +2,25 @@
 from __future__ import annotations
 
 from . import ifb  # type: ignore[attr-defined]
-import struct
 import numpy as np
 import ctypes
+import sys
 from collections import namedtuple
 from typing import Any, Type
 
 _CDESC_OFFSETS: dict[str, int] = ifb._offsetof_cdesc()
+_CDESC_FIELD_SIZES: dict[str, int] = {
+    "rank": ifb._sizeof_cfi_rank_t,
+    "attribute": ifb._sizeof_cfi_attribute_t,
+    "type": ifb._sizeof_cfi_type_t,
+}
+
+
+def _read_signed_field(raw: bytes, field: str) -> int:
+    offset = _CDESC_OFFSETS[field]
+    size = _CDESC_FIELD_SIZES[field]
+    return int.from_bytes(raw[offset : offset + size], sys.byteorder, signed=True)
+
 
 __all__ = ["CFI_cdesc", "ifb"]
 
@@ -114,7 +126,7 @@ class CFI_cdesc:
         header_type = ctypes.c_ubyte * ifb._sizeof_cdesc
         raw_header = header_type.in_dll(lib, name)
         header_bytes = bytes([raw_header[i] for i in range(ifb._sizeof_cdesc)])
-        rank = struct.unpack_from("b", header_bytes, _CDESC_OFFSETS["rank"])[0]
+        rank = _read_signed_field(header_bytes, "rank")
 
         # Now read the full descriptor including dim entries.
         full_size = ifb._sizeof_cdesc + ifb._sizeof_dims * rank

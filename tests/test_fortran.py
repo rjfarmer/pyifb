@@ -6,25 +6,21 @@ import pyifb.utils as utils
 import pytest
 import ctypes
 import numpy as np
+import sys
 from pathlib import Path
 
 lib = ctypes.CDLL(Path("tests", f"bindc.{utils.library_ext()}"))
 
-# CFI_cdesc_t field offsets on 64-bit platforms (per ISO_Fortran_binding.h / GCC ABI):
-#   base_addr  : offset  0, size 8 (void*)
-#   elem_len   : offset  8, size 8 (size_t)
-#   version    : offset 16, size 4 (int)
-#   rank       : offset 20, size 1 (int8_t)
-#   attribute  : offset 21, size 1 (int8_t)
-#   type       : offset 22, size 2 (int16_t)
-#   dim[]      : offset 24
-_ATTR_OFFSET = 21
+_ATTR_OFFSET = p.ifb._offsetof_cdesc()["attribute"]
+_ATTR_SIZE = p.ifb._sizeof_cfi_attribute_t
 
 
 def _cdesc_buf(cdesc_t):
     """Return a mutable ctypes buffer from a CFI_cdesc_t with the allocatable attribute set."""
     data = bytearray(cdesc_t.to_bytes())
-    data[_ATTR_OFFSET] = p.ifb.CFI_attribute_allocatable
+    data[_ATTR_OFFSET : _ATTR_OFFSET + _ATTR_SIZE] = int(
+        p.ifb.CFI_attribute_allocatable
+    ).to_bytes(_ATTR_SIZE, sys.byteorder, signed=True)
     return ctypes.create_string_buffer(bytes(data), len(data))
 
 

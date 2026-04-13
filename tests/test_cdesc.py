@@ -52,10 +52,10 @@ class TestCdescT:
         assert offsets["base_addr"] == 0
         assert offsets["base_addr"] < offsets["elem_len"]
         assert offsets["elem_len"] < offsets["version"]
-        assert offsets["version"] <= offsets["rank"]
-        assert offsets["rank"] <= offsets["attribute"]
-        assert offsets["attribute"] <= offsets["type"]
-        assert offsets["type"] <= offsets["dim"]
+        assert offsets["version"] < offsets["dim"]
+        assert offsets["attribute"] < offsets["dim"]
+        assert offsets["rank"] < offsets["dim"]
+        assert offsets["type"] < offsets["dim"]
         assert offsets["dim"] <= p.ifb._sizeof_cdesc
 
     def test_allocate_rank1(self):
