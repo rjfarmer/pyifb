@@ -21,25 +21,27 @@
 
 // Stupid compilers grabbing __GNUC__
 
-#if defined(__GNUC__) && !defined(__llvm__) && !defined(__INTEL_COMPILER)
-    #define REALLY_GCC   __GNUC__ 
-#elif defined(__INTEL_COMPILER) 
-    #define REALLY_ICX __ __INTEL_COMPILER
-#elif defined(__llvm__) 
-    #define REALLY_LLVM __llvm__
+#if defined(__INTEL_LLVM_COMPILER) || defined(__INTEL_COMPILER)
+    #define REALLY_ICX 1
+#elif defined(__llvm__) || defined(__clang__)
+    #define REALLY_LLVM 1
+#elif defined(__GNUC__)
+    #define REALLY_GCC 1
 #else
-    #define REALLY_UNKNOWN 
+    #define REALLY_UNKNOWN 1
 #endif
 
 
 // Add fallback for compilier specific macros
 
-#ifdef REALLY_ICX
-    #define CFI_type_float128 -1
-    #define CFI_type_float128_Complex -1
-#endif
-
 #if defined(REALLY_ICX) || defined(REALLY_LLVM)
+    #ifndef CFI_type_float128
+        #define CFI_type_float128 -1
+    #endif
+    #ifndef CFI_type_float128_Complex
+        #define CFI_type_float128_Complex -1
+    #endif
+
     #define CFI_FAILURE -1
     #define CFI_INVALID_STRIDE -1
     #define CFI_type_mask -1
