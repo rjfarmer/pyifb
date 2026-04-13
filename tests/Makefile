@@ -37,7 +37,12 @@ $(error Unknown OS $(OS) $(uname_S))
 endif
 
 
-all: $(LIBS) $(GZ)
+C_HELPERS = cdesc_test_helper.$(LIB_SUFFIX)
+
+all: $(LIBS) $(C_HELPERS) $(GZ)
+
+cdesc_test_helper.$(LIB_SUFFIX): cdesc_test_helper.c
+	gcc $(LIB_FLAGS) -I.. -o $@ $<
 
 %.$(LIB_SUFFIX): %.f90
 	$(FC) $(OPTIONS) $(LIB_FLAGS) -cpp -o  $@ $<

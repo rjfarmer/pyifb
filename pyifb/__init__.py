@@ -1,9 +1,20 @@
 # SPDX-License-Identifier: GPL-2.0+
+from __future__ import annotations
 
 from . import ifb
+import struct
 import numpy as np
 import ctypes
 from collections import namedtuple
+from typing import Any
+
+# Byte offset of the rank field inside CFI_cdesc_t.
+# Layout: void* base_addr + size_t elem_len + int version + int8_t rank
+_RANK_OFFSET: int = (
+    ctypes.sizeof(ctypes.c_void_p)
+    + ctypes.sizeof(ctypes.c_size_t)
+    + ctypes.sizeof(ctypes.c_int)
+)
 
 __all__ = ["CFI_cdesc"]
 
@@ -25,7 +36,9 @@ class CFI_cdesc:
         >>> array = cdesc.value  # Access as numpy array
     """
 
-    def __init__(self, rank=None, *args, **kwargs):
+    _cfi: Any
+
+    def __init__(self, rank: int | None = None, *args: Any, **kwargs: Any) -> None:
         """Initialize an empty CFI_cdesc wrapper.
 
         The internal C descriptor is not allocated until _new() or from_bytes() is called.
@@ -34,7 +47,7 @@ class CFI_cdesc:
         if rank is not None:
             self._new(rank)
 
-    def _new(self, rank):
+    def _new(self, rank: int) -> None:
         """Create a new C descriptor with the specified rank.
 
         Args:
@@ -42,7 +55,7 @@ class CFI_cdesc:
         """
         self._cfi = ifb.CFI_cdesc_t(rank)
 
-    def from_bytes(self, b):
+    def from_bytes(self, b: Any) -> CFI_cdesc:
         """Deserialize a C descriptor from bytes.
 
         Accepts bytes from various sources (ctypes arrays, bytearrays, raw bytes)
@@ -66,27 +79,27 @@ class CFI_cdesc:
         self._cfi = ifb.CFI_cdesc_t.from_bytes(b)
         return self
 
-    def to_bytes(self):
+    def to_bytes(self) -> bytes | None:
         """Serialize the C descriptor to bytes.
 
         Returns:
             bytes: Serialized representation of the descriptor including rank and dimensions.
         """
         if self._cfi is not None:
-            return self._cfi.to_bytes
+            return self._cfi.to_bytes()
 
     @property
-    def _as_parameter_(self):
+    def _as_parameter_(self) -> bytes | None:
         """ctypes interoperability property for passing to C functions.
 
         Returns:
             bytes: Serialized descriptor for use with ctypes C function calls.
         """
         if self._cfi is not None:
-            return self._cfi._as_parameter_
+            return self._cfi._as_parameter
 
     @classmethod
-    def in_dll(cls, lib, name):
+    def in_dll(cls, lib: ctypes.CDLL, name: str) -> CFI_cdesc:
         """Load a C descriptor from a shared library (DLL/SO).
 
         Reads a descriptor from a named global variable in a loaded library.
@@ -100,22 +113,25 @@ class CFI_cdesc:
         Returns:
             CFI_cdesc: Populated descriptor object.
         """
-        # Make something just big enough so we can pull the rank out
-        descriptor_bytes = ctypes.c_ubyte * ifb._sizeof_cdesc
-        temp = cls()
-        rank = temp.from_bytes(descriptor_bytes.in_dll(lib, name)).rank
+        # Read just the base header to extract rank without going through
+        # from_bytes (which requires the full header + all dim entries).
+        header_type = ctypes.c_ubyte * ifb._sizeof_cdesc
+        raw_header = header_type.in_dll(lib, name)
+        header_bytes = bytes([raw_header[i] for i in range(ifb._sizeof_cdesc)])
+        rank = struct.unpack_from("b", header_bytes, _RANK_OFFSET)[0]
 
-        # Get full sized object
-        descriptor_bytes = ctypes.c_ubyte * (
-            ifb._sizeof_cdesc + (ifb._sizeof_dims * rank)
-        )
-        temp = cls()
-        temp = temp.from_bytes(descriptor_bytes.in_dll(lib, name))
+        # Now read the full descriptor including dim entries.
+        full_size = ifb._sizeof_cdesc + ifb._sizeof_dims * rank
+        full_type = ctypes.c_ubyte * full_size
+        raw_full = full_type.in_dll(lib, name)
+        full_bytes = bytes([raw_full[i] for i in range(full_size)])
 
+        temp = cls()
+        temp._cfi = ifb.CFI_cdesc_t.from_bytes(full_bytes)
         return temp
 
     @property
-    def value(self):
+    def value(self) -> np.ndarray | None:
         """Reconstruct the array data as a numpy array.
 
         Casts the base_addr pointer to the appropriate ctypes type and creates
@@ -151,7 +167,7 @@ class CFI_cdesc:
         return array
 
     @value.setter
-    def value(self, value):
+    def value(self, value: Any) -> None:
         if self._cfi is None:
             return
 
@@ -176,43 +192,43 @@ class CFI_cdesc:
         ctypes.memmove(self._cfi.base_addr, src.ctypes.data, src.nbytes)
 
     @property
-    def rank(self):
+    def rank(self) -> int | None:
         """int: Number of dimensions (0 for scalar, >0 for array)."""
         if self._cfi is not None:
             return self._cfi.rank
 
     @property
-    def attribute(self):
+    def attribute(self) -> int | None:
         """int: Attribute code (allocatable, pointer, or other)."""
         if self._cfi is not None:
             return self._cfi.attribute
 
     @property
-    def dim(self):
+    def dim(self) -> tuple[Any, ...] | None:
         """tuple or None: Dimension objects containing lower_bound, extent, and stride info."""
         if self._cfi is not None:
             return self._cfi.dim
 
     @property
-    def elem_len(self):
+    def elem_len(self) -> int | None:
         """int: Size of one array element in bytes."""
         if self._cfi is not None:
             return self._cfi.elem_len
 
     @property
-    def type(self):
+    def type(self) -> _cfi_tuple | None:
         """NamedTuple: Type information (name, ctype, pytype, dtype)."""
         if self._cfi is not None:
-            return _map_cfi_type(self._cfi.type)
+            return _map_cfi_type[self._cfi.type]
 
     @property
-    def version(self):
+    def version(self) -> int | None:
         """int: CFI version of the descriptor."""
         if self._cfi is not None:
             return self._cfi.version
 
     @property
-    def shape(self):
+    def shape(self) -> int | tuple[int, ...] | None:
         """tuple or int: Shape of the array (0 for scalar, tuple of extents for arrays)."""
         if self._cfi is not None:
             if self.rank == 0:
@@ -220,35 +236,35 @@ class CFI_cdesc:
             return tuple([i.extent for i in self._cfi.dim])
 
     @property
-    def size(self):
+    def size(self) -> int | None:
         """int: Total number of elements in the array."""
         if self._cfi is not None:
-            return np.product(self.shape)
+            return np.prod(self.shape)
 
     @property
-    def pytype(self):
+    def pytype(self) -> type[Any] | None:
         """type: Python type corresponding to the element type (int, float, bool, etc)."""
         if self._cfi is not None:
             return self.type.pytype
 
     @property
-    def dtype(self):
+    def dtype(self) -> np.dtype[Any] | str | None:
         """numpy.dtype or str or None: NumPy dtype for the element type."""
         if self._cfi is not None:
             return self.type.dtype
 
     @property
-    def ctype(self):
+    def ctype(self) -> type[Any] | None:
         """ctypes type: ctypes representation of the element type for C interop."""
         if self._cfi is not None:
-            return _map_cfi_type(self.type).ctype
+            return self.type.ctype
 
 
 _cfi_tuple = namedtuple(
     "_cfi_tuple", ("name", "ctype", "pytype", "dtype"), defaults=(None, None, None)
 )
 
-_map_cfi_type = {
+_map_cfi_type: dict[int, _cfi_tuple] = {
     ifb.CFI_type_Bool: _cfi_tuple("CFI_type_Bool", ctypes.c_bool, bool, bool),
     ifb.CFI_type_cfunptr: _cfi_tuple("CFI_type_cfunptr", ctypes.c_ubyte * 8),
     ifb.CFI_type_char: _cfi_tuple("CFI_type_char", ctypes.c_char, str, "B"),
