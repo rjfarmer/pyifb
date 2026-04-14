@@ -35,13 +35,17 @@ jobs:
     
       - name: Build
         run: |
-          export CC=clang
           python -m build
           python -m pip install dist/pyifb*.whl
-
+        env:
+          CC: clang
+          FC: flang 
   
       - name: Test
         # Don't use python -m pytest as that screws up the module loading
         run: |
           pytest -v
+        env:
+          CC: clang
+          FC: flang
 

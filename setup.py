@@ -9,6 +9,7 @@ lib_dirs: list[Any] = []
 args: list[Any] = []
 link_args: list[Any] = []
 extra_objects: list[Any] = []
+include_dirs: list[Any] = []
 
 
 def _detect_clang_fortran_runtime():
@@ -55,6 +56,18 @@ def _detect_clang_fortran_runtime():
     return ["FortranRuntime"], []
 
 
+def _detect_clang_include_dir() -> str | None:
+    clang_root = Path("/usr/lib/clang")
+    if not clang_root.exists():
+        return None
+
+    for path in sorted(clang_root.glob("*/include"), reverse=True):
+        if path.is_dir() and (path / "ISO_Fortran_binding.h").exists():
+            return str(path)
+
+    return None
+
+
 if os.environ.get("CC") == "icx":
     oneapi_root = os.environ.get("ONEAPI_ROOT")
     if oneapi_root is not None:
@@ -63,6 +76,9 @@ if os.environ.get("CC") == "icx":
     link_args = ["-fortlib"]
 elif os.environ.get("CC") == "clang":
     lib, lib_dirs = _detect_clang_fortran_runtime()
+    clang_include_dir = _detect_clang_include_dir()
+    if clang_include_dir is not None:
+        include_dirs = [clang_include_dir]
 
 
 else:
@@ -85,6 +101,7 @@ setup(
                 "pyifb/ifb.c",
             ],
             library_dirs=lib_dirs,
+            include_dirs=include_dirs,
             libraries=lib,
             extra_compile_args=args,
             extra_link_args=link_args,

@@ -45,6 +45,7 @@ jobs:
           python -m pip install dist/pyifb*.whl
         env:
           CC: icx
+          FC: ifx
 
   
       - name: Test
@@ -53,4 +54,5 @@ jobs:
           pytest -v
         env:
           CC: icx
+          FC: ifx
 

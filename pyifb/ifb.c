@@ -248,9 +248,10 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     size_t elem_len;
     CFI_rank_t rank;
     CFI_index_t *lower_bounds, *upper_bounds;
+    int type_code = 0;
     int status;
 
-    if (!PyArg_ParseTuple(args, "OOK", &lower_bounds_seq, &upper_bounds_seq, &elem_len)) {
+    if (!PyArg_ParseTuple(args, "OOK|i", &lower_bounds_seq, &upper_bounds_seq, &elem_len, &type_code)) {
         return NULL;
     }
 
@@ -271,8 +272,10 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     if (self->dv.version == 0) {
         self->dv.version = CFI_VERSION;
     }
-    if (self->dv.type == 0) {
-        self->dv.type = CFI_type_other;
+    if (type_code != 0) {
+        self->dv.type = (CFI_type_t)type_code;
+    } else if (self->dv.type == 0) {
+        self->dv.type = CFI_type_char;
     }
 
     if (self->dv.attribute != CFI_attribute_allocatable && self->dv.attribute != CFI_attribute_pointer) {
@@ -311,39 +314,45 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
         return NULL;
     }
 
-    /* Allocate temporary arrays for C function */
-    lower_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
-    upper_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+    lower_bounds = NULL;
+    upper_bounds = NULL;
 
-    if (lower_bounds == NULL || upper_bounds == NULL) {
-        free(lower_bounds);
-        free(upper_bounds);
-        return PyErr_NoMemory();
-    }
+    /* CFI_allocate for rank-0 expects NULL bounds pointers on some runtimes. */
+    if (rank > 0) {
+        /* Allocate temporary arrays for C function */
+        lower_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
+        upper_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
 
-    /* Convert Python sequences to C arrays */
-    for (CFI_rank_t i = 0; i < rank; i++) {
-        PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
-        PyObject *ub_item = PySequence_GetItem(upper_bounds_seq, i);
-
-        if (lb_item == NULL || ub_item == NULL) {
+        if (lower_bounds == NULL || upper_bounds == NULL) {
             free(lower_bounds);
             free(upper_bounds);
-            Py_XDECREF(lb_item);
-            Py_XDECREF(ub_item);
-            return NULL;
+            return PyErr_NoMemory();
         }
 
-        lower_bounds[i] = PyLong_AsLong(lb_item);
-        upper_bounds[i] = PyLong_AsLong(ub_item);
+        /* Convert Python sequences to C arrays */
+        for (CFI_rank_t i = 0; i < rank; i++) {
+            PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
+            PyObject *ub_item = PySequence_GetItem(upper_bounds_seq, i);
 
-        Py_DECREF(lb_item);
-        Py_DECREF(ub_item);
+            if (lb_item == NULL || ub_item == NULL) {
+                free(lower_bounds);
+                free(upper_bounds);
+                Py_XDECREF(lb_item);
+                Py_XDECREF(ub_item);
+                return NULL;
+            }
 
-        if (PyErr_Occurred()) {
-            free(lower_bounds);
-            free(upper_bounds);
-            return NULL;
+            lower_bounds[i] = PyLong_AsLong(lb_item);
+            upper_bounds[i] = PyLong_AsLong(ub_item);
+
+            Py_DECREF(lb_item);
+            Py_DECREF(ub_item);
+
+            if (PyErr_Occurred()) {
+                free(lower_bounds);
+                free(upper_bounds);
+                return NULL;
+            }
         }
     }
 

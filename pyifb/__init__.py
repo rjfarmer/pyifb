@@ -15,6 +15,18 @@ _CDESC_FIELD_SIZES: dict[str, int] = {
     "type": ifb._sizeof_cfi_type_t,
 }
 
+_DTYPE_TO_CFI_TYPE = {
+    np.dtype(np.bool_): getattr(ifb, "CFI_type_Bool", None),
+    np.dtype(np.int8): getattr(ifb, "CFI_type_int8_t", None),
+    np.dtype(np.int16): getattr(ifb, "CFI_type_int16_t", None),
+    np.dtype(np.int32): getattr(ifb, "CFI_type_int32_t", None),
+    np.dtype(np.int64): getattr(ifb, "CFI_type_int64_t", None),
+    np.dtype(np.float32): getattr(ifb, "CFI_type_float", None),
+    np.dtype(np.float64): getattr(ifb, "CFI_type_double", None),
+    np.dtype(np.complex64): getattr(ifb, "CFI_type_float_Complex", None),
+    np.dtype(np.complex128): getattr(ifb, "CFI_type_double_Complex", None),
+}
+
 
 def _read_signed_field(raw: bytes, field: str) -> int:
     offset = _CDESC_OFFSETS[field]
@@ -187,7 +199,13 @@ class CFI_cdesc:
         if self._cfi.base_addr is None:
             lower = [0] * value.ndim
             upper = [s - 1 for s in value.shape]
-            self._cfi.allocate(lower, upper, value.itemsize)
+            cfi_type = _DTYPE_TO_CFI_TYPE.get(value.dtype)
+            if cfi_type is None:
+                status = self._cfi.allocate(lower, upper, value.itemsize)
+            else:
+                status = self._cfi.allocate(lower, upper, value.itemsize, cfi_type)
+            if status != ifb.CFI_SUCCESS or self._cfi.base_addr is None:
+                raise RuntimeError(f"CFI_allocate failed with status {status}")
 
         shape = self.shape
         if shape != 0 and value.shape != shape:

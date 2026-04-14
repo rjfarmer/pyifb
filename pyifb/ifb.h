@@ -42,16 +42,36 @@
         #define CFI_type_float128_Complex -1
     #endif
 
-    #define CFI_FAILURE -1
-    #define CFI_INVALID_STRIDE -1
-    #define CFI_type_mask -1
-    #define CFI_type_kind_shift -1
-    #define CFI_type_Integer -1
-    #define CFI_type_Logical -1
-    #define CFI_type_Real -1
-    #define CFI_type_Complex -1
-    #define CFI_type_Character -1
-    #define CFI_type_cfunptr -1
+    #ifndef CFI_FAILURE
+        #define CFI_FAILURE -1
+    #endif
+    #ifndef CFI_INVALID_STRIDE
+        #define CFI_INVALID_STRIDE -1
+    #endif
+    #ifndef CFI_type_mask
+        #define CFI_type_mask -1
+    #endif
+    #ifndef CFI_type_kind_shift
+        #define CFI_type_kind_shift -1
+    #endif
+    #ifndef CFI_type_Integer
+        #define CFI_type_Integer -1
+    #endif
+    #ifndef CFI_type_Logical
+        #define CFI_type_Logical -1
+    #endif
+    #ifndef CFI_type_Real
+        #define CFI_type_Real -1
+    #endif
+    #ifndef CFI_type_Complex
+        #define CFI_type_Complex -1
+    #endif
+    #ifndef CFI_type_Character
+        #define CFI_type_Character -1
+    #endif
+    #ifndef CFI_type_cfunptr
+        #define CFI_type_cfunptr -1
+    #endif
 #endif
 
 #if PY_MAJOR_VERSION == 3
@@ -92,6 +112,15 @@
         #define PyCFI_attribute_t Py_T_INT
         #define PyCFI_rank_t Py_T_INT
     #endif
+#elif REALLY_LLVM
+    #if __SIZEOF_PTRDIFF_T__ == 8
+        #define PyCFI_index_t Py_T_LONG
+    #else
+        #define PyCFI_index_t Py_T_INT
+    #endif
+    #define PyCFI_type_t Py_T_BYTE
+    #define PyCFI_attribute_t Py_T_BYTE
+    #define PyCFI_rank_t Py_T_BYTE
 #else
     #define PyCFI_index_t Py_T_LONG
     #define PyCFI_type_t Py_T_LONG

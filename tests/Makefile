@@ -41,6 +41,7 @@ ARCH := $(shell uname -m)
 ifndef FLANG_RT_DIR
 FLANG_RT_DIR := $(shell ls -d /usr/lib/clang/*/lib/$(ARCH)-redhat-linux-gnu /usr/lib/llvm-*/lib 2>/dev/null | sort -V | tail -n 1)
 endif
+FLANG_INCLUDE_DIR := $(patsubst %/lib/$(ARCH)-redhat-linux-gnu,%/include,$(FLANG_RT_DIR))
 
 ifeq ($(CC),icx)
    C_HELPER_LIBS = -fortlib
@@ -67,7 +68,7 @@ endif
 all: $(LIBS) $(C_HELPERS) $(GZ)
 
 cdesc_test_helper.$(LIB_SUFFIX): cdesc_test_helper.c
-	$(CC) $(LIB_FLAGS) -I.. -o $@ $< $(C_HELPER_LIBS)
+	$(CC) $(LIB_FLAGS) -I.. -I$(FLANG_INCLUDE_DIR) -o $@ $< $(C_HELPER_LIBS)
 
 %.$(LIB_SUFFIX): %.f90
 	$(FC) $(OPTIONS) $(LIB_FLAGS) -cpp -o  $@ $<
