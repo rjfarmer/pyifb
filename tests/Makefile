@@ -2,7 +2,7 @@
 .PHONY = all clean
 
 CC ?= gcc
-FC = gfortran
+FC ?= gfortran
 
 SRCS = $(wildcard *.f90)
 MODS =  $(wildcard *.mod)
