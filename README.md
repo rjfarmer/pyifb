@@ -124,115 +124,36 @@ Install development extras (example):
 python -m pip install -e ".[dev,test]"
 ```
 
-## Troubleshooting
+## Compilers
 
-### Build fails with missing compiler toolchain
+By default we compile with gcc/gfortran and that is the version shipped in PyPI. We support
+other compiliers:
 
-Symptoms:
+- Intel ICC/IFX
+- Clang
 
-- `error: command 'gcc' failed`
-- `fatal error: Python.h: No such file or directory`
+These must be built locally, to do set the environement variables:
 
-Fix:
+````bash
+export CC=icx
+export FC=ifx
+````
 
-- Install system build tools and Python development headers.
-- On Debian/Ubuntu this is typically:
+or
 
-```bash
-sudo apt-get update
-sudo apt-get install -y build-essential python3-dev
-```
+````bash
+export CC=clang
+export FC=flang
+````
 
-### Import or test fails with missing Fortran runtime
-
-Symptoms:
-
-- `ImportError: libgfortran.so.*: cannot open shared object file`
-
-Fix:
-
-- Install GNU Fortran runtime/development package for your distro.
-- Confirm runtime visibility with:
+Then install the package
 
 ```bash
-ldconfig -p | grep gfortran
-```
-
-### Tests fail because Fortran test library was not built
-
-Symptoms:
-
-- `OSError` when loading `tests/bindc.so` (or `.dylib`/`.dll`)
-
-Fix:
-
-- Ensure `gfortran` is installed.
-- Rebuild test fixtures:
-
-```bash
-make -C tests clean
-make -C tests
-pytest
-```
-
-### Using `CC=clang` and link errors appear
-
-Symptoms:
-
-- Linker errors mentioning `FortranRuntime` or missing Fortran symbols
-
-Fix:
-
-- This project has special-case clang behavior in `setup.py` and may require LLVM Fortran runtime availability.
-- If clang-based linking is problematic on your system, unset `CC` and build with default GCC toolchain:
-
-```bash
-unset CC
 python -m pip install -e .
 ```
 
-### Intel toolchain (`CC=icx`) fails
+Other compilers can be support on request, if they have a publicly readable `ISO_Fortran_Bindings.h` file. Please open a bug request for a new compiler.
 
-Symptoms:
-
-- Link errors related to Intel runtime paths
-
-Fix:
-
-- Ensure oneAPI is installed and `ONEAPI_ROOT` is exported.
-- Verify the expected runtime library directory exists.
-
-### ABI/environment mismatch after Python upgrade
-
-Symptoms:
-
-- Extension builds but import fails, or stale binary behavior appears
-
-Fix:
-
-- Recreate your virtual environment and reinstall:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip
-python -m pip install -e ".[dev,test]"
-```
-
-### Need a clean rebuild
-
-```bash
-rm -rf build dist *.egg-info
-find . -name "__pycache__" -type d -prune -exec rm -rf {} +
-python -m pip install -e .
-```
-
-## Project Layout
-
-- `pyifb/ifb.c`: CPython extension implementation
-- `pyifb/ifb.h`: extension declarations/helpers
-- `pyifb/__init__.py`: public Python API and high-level wrapper
-- `tests/`: pytest suite and Fortran test fixture (`bindc.f90`)
 
 ## License
 

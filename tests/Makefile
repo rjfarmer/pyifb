@@ -37,13 +37,31 @@ endif
 
 
 C_HELPERS = cdesc_test_helper.$(LIB_SUFFIX)
+ARCH := $(shell uname -m)
+ifndef FLANG_RT_DIR
+FLANG_RT_DIR := $(shell ls -d /usr/lib/clang/*/lib/$(ARCH)-redhat-linux-gnu /usr/lib/llvm-*/lib 2>/dev/null | sort -V | tail -n 1)
+endif
 
 ifeq ($(CC),icx)
    C_HELPER_LIBS = -fortlib
    OPTIONS = -O2 --warn-all -fcheck=all
+else ifneq (,$(findstring flang,$(notdir $(FC))))
+   # flang does not accept many gfortran-specific hardening/debug switches.
+   OPTIONS ?= -O2
+   ifneq (,$(wildcard $(FLANG_RT_DIR)/libflang_rt.runtime.so))
+      C_HELPER_LIBS ?= -L$(FLANG_RT_DIR) -lflang_rt.runtime
+   else ifneq (,$(wildcard $(FLANG_RT_DIR)/libflang_rt.runtime.a))
+      C_HELPER_LIBS ?= -L$(FLANG_RT_DIR) -lflang_rt.runtime
+   else ifneq (,$(wildcard $(FLANG_RT_DIR)/libFortranRuntime.so))
+      C_HELPER_LIBS ?= -L$(FLANG_RT_DIR) -lFortranRuntime
+   else ifneq (,$(wildcard $(FLANG_RT_DIR)/libFortranRuntime.a))
+      C_HELPER_LIBS ?= -L$(FLANG_RT_DIR) -lFortranRuntime
+   else
+      C_HELPER_LIBS ?= -lFortranRuntime
+   endif
 else
-   C_HELPER_LIBS = -lgfortran
-   OPTIONS=-ggdb -D_FORTIFY_SOURCE=2 -ffree-line-length-none  -ffree-form -fstack-clash-protection -fstack-protector-all -fstack-protector
+   C_HELPER_LIBS ?= -lgfortran
+   OPTIONS ?= -ggdb -D_FORTIFY_SOURCE=2 -ffree-line-length-none  -ffree-form -fstack-clash-protection -fstack-protector-all -fstack-protector
 endif
 
 all: $(LIBS) $(C_HELPERS) $(GZ)
