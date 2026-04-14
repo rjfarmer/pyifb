@@ -78,7 +78,7 @@ elif os.environ.get("CC") == "clang":
     lib, lib_dirs = _detect_clang_fortran_runtime()
     clang_include_dir = _detect_clang_include_dir()
     if clang_include_dir is not None:
-        include_dirs = [clang_include_dir]
+        args.extend(["-idirafter", clang_include_dir])
 
 
 else:
