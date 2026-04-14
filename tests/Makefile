@@ -49,7 +49,7 @@ endif
 all: $(LIBS) $(C_HELPERS) $(GZ)
 
 cdesc_test_helper.$(LIB_SUFFIX): cdesc_test_helper.c
-	$(CC) $(LIB_FLAGS) $(C_HELPER_LIBS) -I.. -o $@ $<
+	$(CC) $(LIB_FLAGS) -I.. -o $@ $< $(C_HELPER_LIBS)
 
 %.$(LIB_SUFFIX): %.f90
 	$(FC) $(OPTIONS) $(LIB_FLAGS) -cpp -o  $@ $<
