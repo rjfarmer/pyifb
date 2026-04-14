@@ -4,12 +4,7 @@
 #define PY_SSIZE_T_CLEAN
 #define Py_LIMITED_API 0x030A0000
 #include <Python.h>
-
-#if PY_MAJOR_VERSION == 3
-    #if PY_MINOR_VERSION < 12
-#include <structmember.h> // Removed in 3.12
-    #endif
-#endif
+#include <structmember.h>
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -74,15 +69,26 @@
     #endif
 #endif
 
-#if PY_MAJOR_VERSION == 3
-    #if PY_MINOR_VERSION < 12
-        #define Py_T_INT T_INT
-        #define Py_T_LONG T_LONG
-        #define Py_T_PYSSIZET T_PYSSIZET
-        #define Py_T_SHORT T_SHORT
-        #define Py_T_BYTE Py_T_CHAR
-        #define Py_READONLY READONLY
-    #endif
+#ifndef Py_T_INT
+    #define Py_T_INT T_INT
+#endif
+#ifndef Py_T_LONG
+    #define Py_T_LONG T_LONG
+#endif
+#ifndef Py_T_PYSSIZET
+    #define Py_T_PYSSIZET T_PYSSIZET
+#endif
+#ifndef Py_T_SHORT
+    #define Py_T_SHORT T_SHORT
+#endif
+#ifndef Py_T_BYTE
+    #define Py_T_BYTE T_BYTE
+#endif
+#ifndef Py_T_CHAR
+    #define Py_T_CHAR T_CHAR
+#endif
+#ifndef Py_READONLY
+    #define Py_READONLY READONLY
 #endif
 
 // Can't use sizeof here but we know that CFI_index_t is
