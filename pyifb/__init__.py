@@ -37,6 +37,37 @@ def _read_signed_field(raw: bytes, field: str) -> int:
 __all__ = ["CFI_cdesc", "ifb"]
 
 
+_CFI_STATUS_MESSAGES_BY_NAME: dict[str, str] = {
+    "CFI_SUCCESS": "Success",
+    "CFI_ERROR_BASE_ADDR_NULL": "Base address is NULL",
+    "CFI_ERROR_BASE_ADDR_NOT_NULL": "Base address is not NULL",
+    "CFI_INVALID_RANK": "Invalid rank",
+    "CFI_INVALID_TYPE": "Invalid type",
+    "CFI_INVALID_ATTRIBUTE": "Invalid attribute",
+    "CFI_INVALID_EXTENT": "Invalid extent",
+    "CFI_INVALID_DESCRIPTOR": "Invalid descriptor",
+    "CFI_ERROR_MEM_ALLOCATION": "Memory allocation failed",
+    "CFI_ERROR_OUT_OF_BOUNDS": "Out of bounds",
+    "CFI_FAILURE": "General failure",
+    "CFI_INVALID_STRIDE": "Invalid stride",
+}
+
+CFI_STATUS_STRINGS: dict[int, str] = {}
+for _status_name, _status_message in _CFI_STATUS_MESSAGES_BY_NAME.items():
+    _status_value = getattr(ifb, _status_name, None)
+    if _status_value is not None:
+        CFI_STATUS_STRINGS.setdefault(int(_status_value), _status_message)
+
+
+def cfi_status_to_string(status: int) -> str:
+    """Return a human-readable message for a CFI status code."""
+    status_int = int(status)
+    return CFI_STATUS_STRINGS.get(status_int, f"Unknown CFI status ({status_int})")
+
+
+__all__.extend(["CFI_STATUS_STRINGS", "cfi_status_to_string"])
+
+
 class CFI_cdesc:
     """High-level Python wrapper for ISO Fortran Binding C Descriptors (CFI_cdesc_t).
 
@@ -205,7 +236,9 @@ class CFI_cdesc:
             else:
                 status = self._cfi.allocate(lower, upper, value.itemsize, cfi_type)
             if status != ifb.CFI_SUCCESS or self._cfi.base_addr is None:
-                raise RuntimeError(f"CFI_allocate failed with status {status}")
+                raise RuntimeError(
+                    f"CFI_allocate failed with status {cfi_status_to_string(status)}"
+                )
 
         shape = self.shape
         if shape != 0 and value.shape != shape:

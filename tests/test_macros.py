@@ -41,6 +41,17 @@ class TestMacros:
         assert p.ifb.CFI_ERROR_MEM_ALLOCATION != 0
         assert p.ifb.CFI_ERROR_OUT_OF_BOUNDS != 0
 
+    def test_status_strings(self):
+        assert p.CFI_STATUS_STRINGS[p.ifb.CFI_SUCCESS] == "Success"
+        assert (
+            p.CFI_STATUS_STRINGS[p.ifb.CFI_ERROR_MEM_ALLOCATION]
+            == "Memory allocation failed"
+        )
+
+    def test_status_to_string(self):
+        assert p.cfi_status_to_string(p.ifb.CFI_INVALID_TYPE) == "Invalid type"
+        assert p.cfi_status_to_string(123456789) == "Unknown CFI status (123456789)"
+
     def test_compiler(self):
         if p.ifb.IFB_COMPILER == "GCC":
             assert len(p.ifb.IFB_COMPILER_VERSION)
