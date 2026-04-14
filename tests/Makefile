@@ -43,12 +43,17 @@ FLANG_RT_DIR := $(shell ls -d /usr/lib/clang/*/lib/$(ARCH)-redhat-linux-gnu /usr
 endif
 FLANG_INCLUDE_DIR := $(patsubst %/lib/$(ARCH)-redhat-linux-gnu,%/include,$(FLANG_RT_DIR))
 
+C_HELPER_INCLUDES = -I..
+
 ifeq ($(CC),icx)
    C_HELPER_LIBS = -fortlib
    OPTIONS = -O2 --warn-all -fcheck=all
 else ifneq (,$(findstring flang,$(notdir $(FC))))
    # flang does not accept many gfortran-specific hardening/debug switches.
    OPTIONS ?= -O2
+   ifneq ($(strip $(FLANG_INCLUDE_DIR)),)
+      C_HELPER_INCLUDES += -I$(FLANG_INCLUDE_DIR)
+   endif
    ifneq (,$(wildcard $(FLANG_RT_DIR)/libflang_rt.runtime.so))
       C_HELPER_LIBS ?= -L$(FLANG_RT_DIR) -lflang_rt.runtime
    else ifneq (,$(wildcard $(FLANG_RT_DIR)/libflang_rt.runtime.a))
@@ -68,7 +73,7 @@ endif
 all: $(LIBS) $(C_HELPERS) $(GZ)
 
 cdesc_test_helper.$(LIB_SUFFIX): cdesc_test_helper.c
-	$(CC) $(LIB_FLAGS) -I.. -I$(FLANG_INCLUDE_DIR) -o $@ $< $(C_HELPER_LIBS)
+	$(CC) $(LIB_FLAGS) $(C_HELPER_INCLUDES) -o $@ $< $(C_HELPER_LIBS)
 
 %.$(LIB_SUFFIX): %.f90
 	$(FC) $(OPTIONS) $(LIB_FLAGS) -cpp -o  $@ $<
