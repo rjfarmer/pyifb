@@ -45,4 +45,15 @@ module bindc
 
     end subroutine
 
+    subroutine shift_chars(x, n, offset) bind(C, name='shift_chars')
+        integer(c_int), value, intent(in) :: n, offset
+        character(kind=c_char), intent(inout) :: x(n)
+        integer(c_int) :: i
+
+        do i = 1, n
+            x(i) = achar(iachar(x(i)) + offset, kind=c_char)
+        end do
+
+    end subroutine
+
 end module bindc

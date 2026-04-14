@@ -160,6 +160,19 @@ class TestF90:
         lib.fill_array(arr.ctypes.data_as(ctypes.POINTER(ctypes.c_int)), len(arr), 7)
         assert np.all(arr == 7)
 
+    def test_shift_chars(self):
+        lib.shift_chars.argtypes = [
+            ctypes.POINTER(ctypes.c_char),
+            ctypes.c_int,
+            ctypes.c_int,
+        ]
+        lib.shift_chars.restype = None
+
+        arr = (ctypes.c_char * 4)(b"a", b"b", b"c", b"d")
+        lib.shift_chars(arr, len(arr), 1)
+
+        assert bytes(arr) == b"bcde"
+
     def test_is_alloc_allocated(self):
         """CFI descriptor: allocated array should report as allocated."""
         is_alloc = lib.is_alloc
