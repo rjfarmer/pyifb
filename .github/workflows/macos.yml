@@ -43,8 +43,8 @@ jobs:
           python -m build
           python -m pip install dist/pyifb*.whl
         env:
-          CC: ${{ env.CC }}
-          FC: ${{ env.FC }}
+          CC: ${{ steps.setup-fortran.outputs.cc }}
+          FC: ${{ steps.setup-fortran.outputs.fc }}
 
   
       - name: Test
@@ -52,7 +52,7 @@ jobs:
         run: |
           pytest -v
         env:
-          CC: ${{ env.CC }}
-          FC: ${{ env.FC }}
+          CC: ${{ steps.setup-fortran.outputs.cc }}
+          FC: ${{ steps.setup-fortran.outputs.fc }}
 
 
