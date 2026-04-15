@@ -1,7 +1,8 @@
 from setuptools import setup, Extension
 import os
 from pathlib import Path
-import platform
+import shutil
+import subprocess
 from typing import Any
 
 lib: list[Any] = []
@@ -12,9 +13,71 @@ extra_objects: list[Any] = []
 include_dirs: list[Any] = []
 
 
+def _append_existing_dirs(search_dirs: list[Path], *dirs: str | Path | None) -> None:
+    for directory in dirs:
+        if not directory:
+            continue
+        path = Path(directory).expanduser()
+        if path.is_dir():
+            search_dirs.append(path)
+
+
+def _get_command_output(command: list[str]) -> str | None:
+    completed = subprocess.run(
+        command,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        return None
+    return completed.stdout.strip() or None
+
+
+def _append_resource_runtime_dirs(
+    search_dirs: list[Path], compiler: str | None
+) -> None:
+    if not compiler:
+        return
+
+    compiler_path = shutil.which(compiler)
+    if compiler_path is None:
+        return
+
+    resource_dir = _get_command_output([compiler_path, "-print-resource-dir"])
+    if resource_dir is None:
+        return
+
+    arch = _get_command_output(["uname", "-m"])
+    _append_existing_dirs(
+        search_dirs,
+        Path(resource_dir, "lib", f"{arch}-redhat-linux-gnu") if arch else None,
+        Path(resource_dir, "lib", "linux"),
+        Path(resource_dir, "lib"),
+    )
+
+
 def _detect_clang_fortran_runtime():
     """Return (libraries, library_dirs) for the available Fortran runtime."""
-    search_dirs = []
+    search_dirs: list[Path] = []
+
+    flang_rt_dir = os.environ.get("FLANG_RT_DIR")
+    if flang_rt_dir:
+        _append_existing_dirs(search_dirs, flang_rt_dir)
+
+    llvm_config = shutil.which("llvm-config")
+    if llvm_config is not None:
+        llvm_libdir = _get_command_output([llvm_config, "--libdir"])
+        llvm_prefix = _get_command_output([llvm_config, "--prefix"])
+        _append_existing_dirs(
+            search_dirs,
+            llvm_libdir,
+            Path(llvm_prefix, "lib") if llvm_prefix else None,
+            Path(llvm_prefix, "lib64") if llvm_prefix else None,
+        )
+
+    _append_resource_runtime_dirs(search_dirs, os.environ.get("FC", "flang"))
+    _append_resource_runtime_dirs(search_dirs, os.environ.get("CC", "clang"))
 
     # Fedora flang runtime lives under a clang-versioned directory.
     clang_root = Path("/usr/lib/clang")
@@ -29,6 +92,7 @@ def _detect_clang_fortran_runtime():
             Path("/usr/lib/llvm-18/lib"),
             Path("/usr/lib/llvm-19/lib"),
             Path("/usr/lib/llvm-20/lib"),
+            Path("/usr/lib/llvm-21/lib"),
             Path("/usr/lib64"),
             Path("/usr/lib"),
         ]
@@ -56,18 +120,6 @@ def _detect_clang_fortran_runtime():
     return ["FortranRuntime"], []
 
 
-def _detect_clang_include_dir() -> str | None:
-    clang_root = Path("/usr/lib/clang")
-    if not clang_root.exists():
-        return None
-
-    for path in sorted(clang_root.glob("*/include"), reverse=True):
-        if path.is_dir() and (path / "ISO_Fortran_binding.h").exists():
-            return str(path)
-
-    return None
-
-
 if os.environ.get("CC") == "icx":
     oneapi_root = os.environ.get("ONEAPI_ROOT")
     if oneapi_root is not None:
@@ -76,10 +128,6 @@ if os.environ.get("CC") == "icx":
     link_args = ["-fortlib"]
 elif os.environ.get("CC") == "clang":
     lib, lib_dirs = _detect_clang_fortran_runtime()
-    clang_include_dir = _detect_clang_include_dir()
-    if clang_include_dir is not None:
-        args.extend(["-idirafter", clang_include_dir])
-
 
 else:
     lib = ["gfortran"]

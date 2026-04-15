@@ -88,7 +88,7 @@ print(status == pyifb.ifb.CFI_SUCCESS)
 
 ## Testing
 
-The test suite builds a small Fortran shared library in `tests/` (via `make`) and then runs `pytest`.
+The test suite builds a small Fortran shared library in `tests/` (via CMake) and then runs `pytest`.
 
 Run tests:
 
