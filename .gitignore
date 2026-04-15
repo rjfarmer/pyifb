@@ -104,6 +104,18 @@ ENV/
 *.pickle
 .vscode/*
 
+# CMake
+cmake-build*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+compile_commands.json
+build.ninja
+.ninja_deps
+.ninja_log
+tests/.cmake-build*/
+
 docs/build
 docs/source/_build
 
