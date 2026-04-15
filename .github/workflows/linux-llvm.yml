@@ -28,7 +28,7 @@ jobs:
           pip-compile -o requirements.txt --extra test --strip-extras
           python -m pip install -r requirements.txt
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build flang clang libflang-dev
+          sudo apt-get install -y build-essential cmake ninja-build flang clang libflang-dev libclang-common
     
       - name: Build
         run: |
