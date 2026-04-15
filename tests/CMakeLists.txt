@@ -39,115 +39,66 @@ else()
     )
 endif()
 
-function(append_existing_dirs out_var)
-    foreach(_dir IN LISTS ARGN)
-        if(_dir AND IS_DIRECTORY "${_dir}")
-            list(APPEND ${out_var} "${_dir}")
-        endif()
-    endforeach()
-    set(${out_var} "${${out_var}}" PARENT_SCOPE)
+function(get_command_output out_var)
+    execute_process(
+        COMMAND ${ARGN}
+        OUTPUT_VARIABLE _output
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+        RESULT_VARIABLE _status
+    )
+
+    if(_status EQUAL 0 AND _output)
+        set(${out_var} "${_output}" PARENT_SCOPE)
+    else()
+        set(${out_var} "" PARENT_SCOPE)
+    endif()
 endfunction()
 
-function(append_resource_runtime_dirs out_var compiler_path)
+function(find_clang_include_dir out_var compiler_path)
     if(NOT compiler_path)
-        set(${out_var} "${${out_var}}" PARENT_SCOPE)
+        set(${out_var} "" PARENT_SCOPE)
         return()
     endif()
 
-    execute_process(
-        COMMAND "${compiler_path}" -print-resource-dir
-        OUTPUT_VARIABLE _resource_dir
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-        RESULT_VARIABLE _resource_dir_status
-    )
-
-    if(_resource_dir_status EQUAL 0 AND _resource_dir)
-        execute_process(
-            COMMAND uname -m
-            OUTPUT_VARIABLE _arch
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-        )
-        append_existing_dirs(
-            ${out_var}
-            "${_resource_dir}/lib/${_arch}-redhat-linux-gnu"
-            "${_resource_dir}/lib/${CMAKE_SYSTEM_PROCESSOR}-unknown-linux-gnu"
-            "${_resource_dir}/lib/${CMAKE_LIBRARY_ARCHITECTURE}"
-            "${_resource_dir}/lib/linux"
-            "${_resource_dir}/lib"
-        )
+    get_command_output(_include_dir "${compiler_path}" -print-file-name=include)
+    if(_include_dir AND IS_DIRECTORY "${_include_dir}" AND EXISTS "${_include_dir}/ISO_Fortran_binding.h")
+        set(${out_var} "${_include_dir}" PARENT_SCOPE)
     else()
-        set(${out_var} "${${out_var}}" PARENT_SCOPE)
+        set(${out_var} "" PARENT_SCOPE)
     endif()
 endfunction()
 
-function(find_flang_runtime out_link_dir out_link_name)
-    set(_search_dirs "")
-
-    if(DEFINED ENV{FLANG_RT_DIR} AND EXISTS "$ENV{FLANG_RT_DIR}")
-        append_existing_dirs(_search_dirs "$ENV{FLANG_RT_DIR}")
+function(find_clang_runtime out_link_dir out_link_item compiler_path)
+    if(NOT compiler_path)
+        set(${out_link_dir} "" PARENT_SCOPE)
+        set(${out_link_item} "FortranRuntime" PARENT_SCOPE)
+        return()
     endif()
 
-    find_program(LLVM_CONFIG_EXECUTABLE NAMES llvm-config)
-    if(LLVM_CONFIG_EXECUTABLE)
-        execute_process(
-            COMMAND "${LLVM_CONFIG_EXECUTABLE}" --libdir
-            OUTPUT_VARIABLE _llvm_libdir
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-        )
-        execute_process(
-            COMMAND "${LLVM_CONFIG_EXECUTABLE}" --prefix
-            OUTPUT_VARIABLE _llvm_prefix
-            OUTPUT_STRIP_TRAILING_WHITESPACE
-            ERROR_QUIET
-        )
-        append_existing_dirs(
-            _search_dirs
-            "${_llvm_libdir}"
-            "${_llvm_prefix}/lib"
-            "${_llvm_prefix}/lib64"
-        )
+    get_command_output(_runtime_dir "${compiler_path}" -print-runtime-dir)
+    if(NOT _runtime_dir OR NOT IS_DIRECTORY "${_runtime_dir}")
+        set(_runtime_dir "")
     endif()
 
-    append_resource_runtime_dirs(_search_dirs "${CMAKE_Fortran_COMPILER}")
-    append_resource_runtime_dirs(_search_dirs "${CMAKE_C_COMPILER}")
-
-    execute_process(
-        COMMAND uname -m
-        OUTPUT_VARIABLE _arch
-        OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_QUIET
-    )
-    file(GLOB _clang_dirs LIST_DIRECTORIES true "/usr/lib/clang/*/lib/${_arch}-redhat-linux-gnu")
-    file(GLOB _llvm_dirs LIST_DIRECTORIES true "/usr/lib/llvm-*/lib")
-    append_existing_dirs(_search_dirs ${_clang_dirs} ${_llvm_dirs} "/usr/lib64" "/usr/lib")
-
-    list(REMOVE_DUPLICATES _search_dirs)
-
-    set(_chosen_dir "")
-    set(_chosen_lib "")
-    foreach(_dir IN LISTS _search_dirs)
-        if(EXISTS "${_dir}/libflang_rt.runtime.so" OR EXISTS "${_dir}/libflang_rt.runtime.a")
-            set(_chosen_dir "${_dir}")
-            set(_chosen_lib flang_rt.runtime)
-        elseif(EXISTS "${_dir}/libFortranRuntime.so" OR EXISTS "${_dir}/libFortranRuntime.a")
-            set(_chosen_dir "${_dir}")
-            set(_chosen_lib FortranRuntime)
-        endif()
-
-        if(_chosen_lib)
+    set(_link_item "")
+    foreach(_candidate IN ITEMS libflang_rt.runtime.so libflang_rt.runtime.a libflang_rt.runtime.dylib libFortranRuntime.so libFortranRuntime.a libFortranRuntime.dylib)
+        get_command_output(_candidate_path "${compiler_path}" "-print-file-name=${_candidate}")
+        if(_candidate_path AND EXISTS "${_candidate_path}")
+            set(_link_item "${_candidate_path}")
+            if(NOT _runtime_dir)
+                get_filename_component(_runtime_dir "${_candidate_path}" DIRECTORY)
+            endif()
             break()
         endif()
     endforeach()
 
-    if(NOT _chosen_lib)
-        set(_chosen_lib FortranRuntime)
+    if(NOT _link_item)
+        set(_link_item "FortranRuntime")
     endif()
 
-    set(${out_link_dir} "${_chosen_dir}" PARENT_SCOPE)
-    set(${out_link_name} "${_chosen_lib}" PARENT_SCOPE)
+    set(${out_link_dir} "${_runtime_dir}" PARENT_SCOPE)
+    set(${out_link_item} "${_link_item}" PARENT_SCOPE)
 endfunction()
 
 set(_extract_outputs "")
@@ -192,11 +143,21 @@ target_include_directories(cdesc_test_helper PRIVATE "${REPO_ROOT}")
 if(CMAKE_C_COMPILER_ID STREQUAL "IntelLLVM")
     target_link_options(cdesc_test_helper PRIVATE -fortlib)
 elseif(IS_FLANG)
-    find_flang_runtime(_flang_runtime_dir _flang_runtime_name)
-    if(_flang_runtime_dir)
-        target_link_directories(cdesc_test_helper PRIVATE "${_flang_runtime_dir}")
+    set(_clang_compiler "${CMAKE_C_COMPILER}")
+    if(NOT _clang_compiler)
+        set(_clang_compiler "${CMAKE_Fortran_COMPILER}")
     endif()
-    target_link_libraries(cdesc_test_helper PRIVATE "${_flang_runtime_name}")
+
+    find_clang_include_dir(_clang_include_dir "${_clang_compiler}")
+    if(_clang_include_dir)
+        target_include_directories(cdesc_test_helper PRIVATE "${_clang_include_dir}")
+    endif()
+
+    find_clang_runtime(_clang_runtime_dir _clang_runtime_item "${_clang_compiler}")
+    if(_clang_runtime_dir)
+        target_link_directories(cdesc_test_helper PRIVATE "${_clang_runtime_dir}")
+    endif()
+    target_link_libraries(cdesc_test_helper PRIVATE "${_clang_runtime_item}")
 else()
     target_link_libraries(cdesc_test_helper PRIVATE gfortran)
 endif()
