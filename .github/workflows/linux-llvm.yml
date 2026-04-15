@@ -36,6 +36,7 @@ jobs:
     
       - name: Build
         run: |
+          ls $(clang -print-file-name=include)
           python -m build
           python -m pip install dist/pyifb*.whl
         env:
