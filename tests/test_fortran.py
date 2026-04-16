@@ -40,7 +40,45 @@ def _int_buffer_values(cdesc_t):
     return np.ctypeslib.as_array(ptr, shape=(count,)).copy()
 
 
+class Pair(ctypes.Structure):
+    _fields_ = [("x", ctypes.c_int), ("y", ctypes.c_double)]
+
+
 class TestF90:
+    def test_pass_bindc_derived_type(self):
+        pair_sum = lib.pair_sum
+        pair_sum.restype = ctypes.c_int
+        pair_sum.argtypes = [ctypes.POINTER(Pair)]
+
+        assert pair_sum(ctypes.byref(Pair(4, 2.75))) == 6
+        assert pair_sum(ctypes.byref(Pair(-3, 5.1))) == 2
+
+    def test_pass_bindc_explicit_array_of_derived_type(self):
+        pair_array_sum_explicit = lib.pair_array_sum_explicit
+        pair_array_sum_explicit.restype = ctypes.c_int
+        pair_array_sum_explicit.argtypes = [ctypes.POINTER(Pair), ctypes.c_int]
+
+        values = (Pair * 3)(Pair(2, 1.9), Pair(-1, 4.2), Pair(5, 0.1))
+        assert pair_array_sum_explicit(values, len(values)) == 11
+
+    def test_pass_bindc_allocatable_array_of_derived_type(self):
+        pair_array_sum_alloc = lib.pair_array_sum_alloc
+        pair_array_sum_alloc.restype = ctypes.c_int
+
+        values = (Pair * 3)(Pair(2, 1.9), Pair(-1, 4.2), Pair(5, 0.1))
+
+        cdesc = p.ifb.CFI_cdesc_t(1)
+        status = cdesc.allocate(
+            [0],
+            [len(values) - 1],
+            ctypes.sizeof(Pair),
+            p.ifb.CFI_type_struct,
+        )
+        assert status == p.ifb.CFI_SUCCESS
+
+        ctypes.memmove(cdesc.base_addr, ctypes.addressof(values), ctypes.sizeof(values))
+        assert pair_array_sum_alloc(_cdesc_buf(cdesc)) == 11
+
     def test_make(self):
         a = p.CFI_cdesc(rank=0)
         assert a.rank == 0

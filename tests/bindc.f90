@@ -2,6 +2,11 @@ module bindc
     use iso_c_binding
     implicit none
 
+    type, bind(C) :: pair_t
+        integer(c_int) :: x
+        real(c_double) :: y
+    end type pair_t
+
     contains
 
     logical(c_bool) function is_alloc(x) bind(C, name='is_alloc')
@@ -55,5 +60,40 @@ module bindc
         end do
 
     end subroutine
+
+    integer(c_int) function pair_sum(v) bind(C, name='pair_sum')
+        type(pair_t), intent(in) :: v
+
+        pair_sum = v%x + int(v%y, kind=c_int)
+
+    end function
+
+    integer(c_int) function pair_array_sum_explicit(v, n) bind(C, name='pair_array_sum_explicit')
+        integer(c_int), value, intent(in) :: n
+        type(pair_t), intent(in) :: v(n)
+        integer(c_int) :: i
+
+        pair_array_sum_explicit = 0
+        do i = 1, n
+            pair_array_sum_explicit = pair_array_sum_explicit + v(i)%x + int(v(i)%y, kind=c_int)
+        end do
+
+    end function
+
+    integer(c_int) function pair_array_sum_alloc(v) bind(C, name='pair_array_sum_alloc')
+        type(pair_t), allocatable, intent(in) :: v(:)
+        integer(c_int) :: i
+
+        if (.not. allocated(v)) then
+            pair_array_sum_alloc = -1
+            return
+        end if
+
+        pair_array_sum_alloc = 0
+        do i = lbound(v, 1), ubound(v, 1)
+            pair_array_sum_alloc = pair_array_sum_alloc + v(i)%x + int(v(i)%y, kind=c_int)
+        end do
+
+    end function
 
 end module bindc
