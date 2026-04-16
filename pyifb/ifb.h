@@ -11,7 +11,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "ISO_Fortran_binding.h"
+#include <ISO_Fortran_binding.h>
 
 
 // Stupid compilers grabbing __GNUC__
@@ -27,7 +27,7 @@
 #endif
 
 
-// Add fallback for compilier specific macros
+// Add fallback for compiler specific macros
 
 #if defined(REALLY_ICX) || defined(REALLY_LLVM)
     #ifndef CFI_type_float128

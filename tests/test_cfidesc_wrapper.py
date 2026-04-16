@@ -13,6 +13,7 @@ import pyifb.utils as utils
 
 # C helper library exposes a pre-initialised rank-1 CFI_cdesc_t at "cdesc_rank1".
 _helper_lib = ctypes.CDLL(Path("tests", f"cdesc_test_helper.{utils.library_ext()}"))
+_helper_lib.setup.restype = None
 
 
 def _make_typed_cdesc(

@@ -35,19 +35,11 @@ if "icx" in compiler:
     args = ["-fortlib", "-O2"]
     link_args = ["-fortlib"]
 elif "clang" in compiler:
-    clang = shutil.which(compiler)
-    if clang:
-        lib_dirs = [_get_command_output([clang, "-print-runtime-dir"])]
-        include_dirs = [_get_command_output([clang, "-print-file-name=include"])]
-
-        guess = ["flang_rt.runtime", "FortranRuntime"]
-        ext = [".so", ".a", ".dylib"]
-        for libname, e in product(guess, ext):
-            lib_path = _get_command_output([clang, f"-print-file-name=lib{libname}{e}"])
-            if lib_path and os.path.isfile(lib_path):
-                lib = [libname]
-                break
-
+    # Use gcc/gfortran header and library as clang's iso-fortran_binding.h
+    # does not seem consistent with fedora libflang_runtime.so (type and attribute fields are flipped)
+    # and i cant seem to get the include and link flags right .
+    include_dirs = [_get_command_output(["gfortran", "-print-file-name=include"])]
+    lib = ["gfortran"]
     args = ["-O2"]
 
 else:

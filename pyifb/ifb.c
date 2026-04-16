@@ -67,12 +67,10 @@ static PyObject* PyCFI_dim_object_from_CFI_dim_t(CFI_dim_t in){
 
 
 static PyMemberDef PyCFI_cdesc_members[] = {
-    {"elem_len",Py_T_PYSSIZET,offsetof(PyCFI_cdesc_object,dv.elem_len),Py_READONLY,
-        PyDoc_STR("If the object is scalar, the value is the storage size in bytes of the object; otherwise, the value is the storage size in bytes of an element of the object")},
-    {"type",PyCFI_type_t,offsetof(PyCFI_cdesc_object,dv.type),Py_READONLY,
-        PyDoc_STR("The value is equal to the specifier for the type of the object.")},
-        {NULL}  /* Sentinel */
+    {NULL}  /* Sentinel */
 };
+
+
 
 
 static PyObject* PyCFI_cdesc_base_addr_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
@@ -88,6 +86,14 @@ static PyObject* PyCFI_cdesc_rank_get(PyCFI_cdesc_object* self, void* Py_UNUSED)
 
 static PyObject* PyCFI_cdesc_attribute_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     return PyLong_FromLong((long) self->dv.attribute);
+}
+
+static PyObject* PyCFI_cdesc_elem_len_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
+    return PyLong_FromSize_t(self->dv.elem_len);
+}
+
+static PyObject* PyCFI_cdesc_type_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
+    return PyLong_FromLong((long) self->dv.type);
 }
 
 static PyObject* PyCFI_cdesc_version_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
@@ -940,6 +946,16 @@ static PyGetSetDef PyCFI_cdesc_getset[] = {
         .name = "attribute",
         .get = (getter) PyCFI_cdesc_attribute_get,
         .doc = PyDoc_STR("The value is equal to the value of an attribute code that indicates whether the object described is allocatable, a data pointer, or a nonallocatable nonpointer data object.")
+    },
+    {
+        .name = "elem_len",
+        .get = (getter) PyCFI_cdesc_elem_len_get,
+        .doc = PyDoc_STR("If the object is scalar, the value is the storage size in bytes of the object; otherwise, the value is the storage size in bytes of an element of the object")
+    },
+    {
+        .name = "type",
+        .get = (getter) PyCFI_cdesc_type_get,
+        .doc = PyDoc_STR("The value is equal to the specifier for the type of the object.")
     },
     {
         .name = "version",
