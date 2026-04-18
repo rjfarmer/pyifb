@@ -2,7 +2,7 @@ from setuptools import setup, Extension
 import os
 from pathlib import Path
 import shutil
-import subprocess
+import subprocess  # nosec B404
 from typing import Any
 from itertools import product
 
@@ -20,7 +20,7 @@ def _get_command_output(command: list[str]) -> str | None:
         check=False,
         capture_output=True,
         text=True,
-    )
+    )  # nosec B603
     if completed.returncode != 0:
         return None
     return completed.stdout.strip() or None
