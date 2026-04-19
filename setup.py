@@ -70,4 +70,5 @@ setup(
             py_limited_api=True,
         )
     ],
+    options={"bdist_wheel": {"py_limited_api": "cp310"}},
 )

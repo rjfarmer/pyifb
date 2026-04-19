@@ -54,3 +54,9 @@ exclude_dirs = ["tests"]
 source = ["pyifb"]
 parallel = true
 concurrency = ["multiprocessing", "thread"]
+
+[tool.cibuildwheel.linux]
+repair-wheel-command = [
+  "auditwheel repair -w {dest_dir} {wheel}",
+  "pipx run abi3audit --strict --report {wheel}",
+]
