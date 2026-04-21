@@ -257,3 +257,48 @@ class TestCdescT:
         if status == p.ifb.CFI_SUCCESS:
             assert cdesc2.rank == cdesc1.rank
             assert cdesc2.base_addr == cdesc1.base_addr
+
+    def test_establish_rejects_when_descriptor_owns_memory(self):
+        cdesc = p.ifb.CFI_cdesc_t(1)
+        status = cdesc.allocate([1], [10], 4)
+        assert status == p.ifb.CFI_SUCCESS
+
+        with pytest.raises(ValueError, match="must be deallocated before establish"):
+            cdesc.establish(
+                None,
+                p.ifb.CFI_attribute_other,
+                p.ifb.CFI_type_int,
+                4,
+                1,
+                [10],
+            )
+
+    def test_section_rejects_when_result_descriptor_owns_memory(self):
+        src = p.ifb.CFI_cdesc_t(2)
+        dst = p.ifb.CFI_cdesc_t(2)
+
+        assert src.allocate([1, 1], [10, 20], 8) == p.ifb.CFI_SUCCESS
+        assert dst.allocate([1, 1], [10, 20], 8) == p.ifb.CFI_SUCCESS
+
+        with pytest.raises(ValueError, match="must be deallocated before section"):
+            src.section(dst, [2, 5], [5, 10], [1, 1])
+
+    def test_select_part_rejects_when_result_descriptor_owns_memory(self):
+        src = p.ifb.CFI_cdesc_t(1)
+        dst = p.ifb.CFI_cdesc_t(1)
+
+        assert src.allocate([1], [100], 16) == p.ifb.CFI_SUCCESS
+        assert dst.allocate([1], [100], 4) == p.ifb.CFI_SUCCESS
+
+        with pytest.raises(ValueError, match="must be deallocated before select_part"):
+            src.select_part(dst, 8, 4)
+
+    def test_setpointer_rejects_when_descriptor_owns_memory(self):
+        dst = p.ifb.CFI_cdesc_t(1)
+        src = p.ifb.CFI_cdesc_t(1)
+
+        assert dst.allocate([1], [5], 4) == p.ifb.CFI_SUCCESS
+        assert src.allocate([1], [5], 4) == p.ifb.CFI_SUCCESS
+
+        with pytest.raises(ValueError, match="must be deallocated before setpointer"):
+            dst.setpointer(src, [1])

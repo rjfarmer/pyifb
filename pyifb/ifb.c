@@ -75,7 +75,7 @@ static PyMemberDef PyCFI_cdesc_members[] = {
 
 static PyObject* PyCFI_cdesc_base_addr_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     if(self->dv.base_addr==NULL) {
-        return Py_None;
+        Py_RETURN_NONE;
     }
     return PyLong_FromVoidPtr(self->dv.base_addr);
 }
@@ -133,7 +133,7 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
 }
 
 
-static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
+static PyObject* PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *kwds){
 
     CFI_rank_t rank=0;
     int rank_int=0;
@@ -156,8 +156,14 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *
         return NULL;
     }
 
+    allocfunc tp_alloc = (allocfunc)PyType_GetSlot(subtype, Py_tp_alloc);
+    if (tp_alloc == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "Type allocator unavailable");
+        return NULL;
+    }
+
     PyCFI_cdesc_object *self;
-    self = (PyCFI_cdesc_object*) ((allocfunc)PyType_GetSlot(Py_TYPE(subtype), Py_tp_alloc))(subtype, (Py_ssize_t) rank);
+    self = (PyCFI_cdesc_object*) tp_alloc(subtype, (Py_ssize_t) rank);
     if (self == NULL) {
         return NULL;
     }
@@ -167,7 +173,7 @@ static newfunc PyCFI_cdesc_new(PyTypeObject *subtype, PyObject *args, PyObject *
     self->dv.rank = rank;
     self->dv.base_addr = NULL;
 
-    return (newfunc) self;
+    return (PyObject*) self;
 
 }
 
@@ -253,7 +259,7 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     PyObject *lower_bounds_seq, *upper_bounds_seq;
     size_t elem_len;
     CFI_rank_t rank;
-    CFI_index_t *lower_bounds, *upper_bounds;
+    CFI_index_t *lower_bounds = NULL, *upper_bounds = NULL;
     int type_code = 0;
     int status;
 
@@ -273,6 +279,7 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     int saved_version = self->dv.version;
     CFI_type_t saved_type = self->dv.type;
     CFI_attribute_t saved_attribute = self->dv.attribute;
+    size_t saved_elem_len = self->dv.elem_len;
     bool saved_owns_memory = self->owns_memory;
 
     if (self->dv.version == 0) {
@@ -294,13 +301,13 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     if (is_character_type) {
         if (elem_len < 1) {
             PyErr_SetString(PyExc_ValueError, "For character types, elem_len must be at least 1");
-            return NULL;
+            goto error_restore;
         }
     } else {
         // For non-character, elem_len should be positive
         if (elem_len == 0) {
             PyErr_SetString(PyExc_ValueError, "elem_len must be positive");
-            return NULL;
+            goto error_restore;
         }
     }
 
@@ -312,16 +319,13 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     Py_ssize_t upper_len = PySequence_Length(upper_bounds_seq);
 
     if (lower_len == -1 || upper_len == -1) {
-        return NULL;  /* Error already set by PySequence_Length */
+        goto error_restore;  /* Error already set by PySequence_Length */
     }
 
     if (lower_len < (Py_ssize_t)rank || upper_len < (Py_ssize_t)rank) {
         PyErr_SetString(PyExc_ValueError, "Bounds sequences must have at least rank elements");
-        return NULL;
+        goto error_restore;
     }
-
-    lower_bounds = NULL;
-    upper_bounds = NULL;
 
     /* CFI_allocate for rank-0 expects NULL bounds pointers on some runtimes. */
     if (rank > 0) {
@@ -330,9 +334,8 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
         upper_bounds = (CFI_index_t *)malloc(rank * sizeof(CFI_index_t));
 
         if (lower_bounds == NULL || upper_bounds == NULL) {
-            free(lower_bounds);
-            free(upper_bounds);
-            return PyErr_NoMemory();
+            PyErr_NoMemory();
+            goto error_restore;
         }
 
         /* Convert Python sequences to C arrays */
@@ -341,11 +344,9 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
             PyObject *ub_item = PySequence_GetItem(upper_bounds_seq, i);
 
             if (lb_item == NULL || ub_item == NULL) {
-                free(lower_bounds);
-                free(upper_bounds);
                 Py_XDECREF(lb_item);
                 Py_XDECREF(ub_item);
-                return NULL;
+                goto error_restore;
             }
 
             lower_bounds[i] = PyLong_AsLong(lb_item);
@@ -355,9 +356,7 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
             Py_DECREF(ub_item);
 
             if (PyErr_Occurred()) {
-                free(lower_bounds);
-                free(upper_bounds);
-                return NULL;
+                goto error_restore;
             }
         }
     }
@@ -371,7 +370,7 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
 
     if (status != CFI_SUCCESS) {
         /* Restore mutated fields so the descriptor is unchanged on failure */
-        self->dv.elem_len = 0;
+        self->dv.elem_len = saved_elem_len;
         self->dv.version = saved_version;
         self->dv.type = saved_type;
         self->dv.attribute = saved_attribute;
@@ -381,6 +380,16 @@ static PyObject* PyCFI_cdesc_allocate(PyCFI_cdesc_object *self, PyObject *args) 
     }
 
     return PyLong_FromLong((long)status);
+
+error_restore:
+    free(lower_bounds);
+    free(upper_bounds);
+    self->dv.elem_len = saved_elem_len;
+    self->dv.version = saved_version;
+    self->dv.type = saved_type;
+    self->dv.attribute = saved_attribute;
+    self->owns_memory = saved_owns_memory;
+    return NULL;
 }
 
 static void _PyCFI_cdesc_free_fortran(PyCFI_cdesc_object *self) {
@@ -394,8 +403,13 @@ static void _PyCFI_cdesc_free_fortran(PyCFI_cdesc_object *self) {
 
 static void PyCFI_cdesc_dealloc(PyCFI_cdesc_object *self) {
     PyTypeObject *tp = Py_TYPE(self);
+    freefunc tp_free = (freefunc)PyType_GetSlot(tp, Py_tp_free);
     _PyCFI_cdesc_free_fortran(self);
-    PyObject_Free(self);
+    if (tp_free != NULL) {
+        tp_free((PyObject *)self);
+    } else {
+        PyObject_Free((PyObject *)self);
+    }
     Py_DECREF(tp);
 }
 
@@ -417,7 +431,7 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     CFI_type_t type;
     size_t elem_len;
     CFI_rank_t rank;
-    CFI_index_t *extents;
+    CFI_index_t *extents = NULL;
     void *base_addr;
     int status;
 
@@ -426,11 +440,20 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
         return NULL;
     }
 
+    if (self->dv.base_addr != NULL &&
+        (self->owns_memory || self->dv.attribute == CFI_attribute_allocatable)) {
+        PyErr_SetString(PyExc_ValueError, "Descriptor must be deallocated before establish");
+        return NULL;
+    }
+
     /* Convert base_addr from Python object */
     if (Py_IsNone(base_addr_obj)) {
        base_addr = NULL;
     } else if (PyLong_Check(base_addr_obj)) {
        base_addr = PyLong_AsVoidPtr(base_addr_obj);
+       if (PyErr_Occurred()) {
+           return NULL;
+       }
     } else {
         PyErr_SetString(PyExc_TypeError, "base_addr must be None or an integer");
         return NULL;
@@ -438,6 +461,9 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
 
     if (PyLong_Check(attribute_obj)) {
         attribute = (CFI_attribute_t) PyLong_AsLong(attribute_obj);
+        if (PyErr_Occurred()) {
+            return NULL;
+        }
     } else {
         PyErr_SetString(PyExc_TypeError, "attribute must be an integer");
         return NULL;
@@ -445,6 +471,9 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
 
     if(PyLong_Check(type_obj)) {
         type = (CFI_type_t) PyLong_AsLong(type_obj);
+        if (PyErr_Occurred()) {
+            return NULL;
+        }
     } else {
         PyErr_SetString(PyExc_TypeError, "type must be an integer");
         return NULL;
@@ -452,6 +481,9 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
 
     if(PyLong_Check(elem_len_obj)) {
         elem_len = (size_t) PyLong_AsSize_t(elem_len_obj);
+        if (PyErr_Occurred()) {
+            return NULL;
+        }
     } else {
         PyErr_SetString(PyExc_TypeError, "elem_len must be an integer");
         return NULL;
@@ -459,8 +491,16 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
 
     if(PyLong_Check(rank_obj)) {
         rank = (CFI_rank_t) PyLong_AsLong(rank_obj);
+        if (PyErr_Occurred()) {
+            return NULL;
+        }
     } else {
         PyErr_SetString(PyExc_TypeError, "rank must be an integer");
+        return NULL;
+    }
+
+    if (rank < 0 || rank > CFI_MAX_RANK) {
+        PyErr_SetString(PyExc_ValueError, "rank must be between 0 and CFI_MAX_RANK");
         return NULL;
     }
 
@@ -483,14 +523,12 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     for (CFI_rank_t i = 0; i < rank; i++) {
         PyObject *ext_item = PySequence_GetItem(extents_seq, i);
         if (ext_item == NULL) {
-            free(extents);
-            return NULL;
+            goto error_cleanup;
         }
         extents[i] = PyLong_AsLong(ext_item);
         Py_DECREF(ext_item);
         if (PyErr_Occurred()) {
-            free(extents);
-            return NULL;
+            goto error_cleanup;
         }
     }
 
@@ -505,6 +543,10 @@ static PyObject* PyCFI_cdesc_establish(PyCFI_cdesc_object *self, PyObject *args)
     }
 
     return PyLong_FromLong((long)status);
+
+error_cleanup:
+    free(extents);
+    return NULL;
 }
 
 static PyObject* PyCFI_cdesc_is_contiguous(PyCFI_cdesc_object *self) {
@@ -512,7 +554,7 @@ static PyObject* PyCFI_cdesc_is_contiguous(PyCFI_cdesc_object *self) {
        Returns: 1 if contiguous, 0 if not, -1 on error
     */
     int result = CFI_is_contiguous(&self->dv);
-    return result == 1 ? Py_True : Py_False;
+    return PyBool_FromLong(result == 1);
 }
 
 static PyObject* PyCFI_cdesc_section(PyCFI_cdesc_object *self, PyObject *args) {
@@ -536,6 +578,12 @@ static PyObject* PyCFI_cdesc_section(PyCFI_cdesc_object *self, PyObject *args) {
     }
 
     result_desc = (PyCFI_cdesc_object *)result_desc_obj;
+
+    if (result_desc->dv.base_addr != NULL &&
+        (result_desc->owns_memory || result_desc->dv.attribute == CFI_attribute_allocatable)) {
+        PyErr_SetString(PyExc_ValueError, "Result descriptor must be deallocated before section");
+        return NULL;
+    }
 
     /* Initialize result descriptor with properties from source */
     result_desc->dv.attribute = CFI_attribute_other;
@@ -760,6 +808,12 @@ static PyObject* PyCFI_cdesc_select_part(PyCFI_cdesc_object *self, PyObject *arg
 
     PyCFI_cdesc_object *res = (PyCFI_cdesc_object *)result_desc;
 
+    if (res->dv.base_addr != NULL &&
+        (res->owns_memory || res->dv.attribute == CFI_attribute_allocatable)) {
+        PyErr_SetString(PyExc_ValueError, "Result descriptor must be deallocated before select_part");
+        return NULL;
+    }
+
     /* Validate result descriptor rank matches source rank */
     if (res->dv.rank != self->dv.rank) {
         PyErr_SetString(PyExc_ValueError, "Result descriptor rank must match source descriptor rank");
@@ -812,10 +866,22 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
         return NULL;
     }
 
+    if (self->dv.base_addr != NULL &&
+        (self->owns_memory || self->dv.attribute == CFI_attribute_allocatable)) {
+        PyErr_SetString(PyExc_ValueError, "Descriptor must be deallocated before setpointer");
+        return NULL;
+    }
+
+    /* Snapshot original descriptor state for rollback on all post-mutation failures. */
+    size_t saved_sp_elem_len = self->dv.elem_len;
+    CFI_type_t saved_sp_type = self->dv.type;
+    int saved_sp_version = self->dv.version;
+    CFI_attribute_t saved_sp_attribute = self->dv.attribute;
+
     if (source_desc_obj != Py_None) {
         if (!PyObject_TypeCheck(source_desc_obj, Py_TYPE(self))) {
             PyErr_SetString(PyExc_TypeError, "source_desc must be a CFI_cdesc_t or None");
-            return NULL;
+            goto error_restore;
         }
         source_desc = (PyCFI_cdesc_object *) source_desc_obj;
         source_rank = source_desc->dv.rank;
@@ -824,41 +890,35 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
             source_desc->dv.attribute != CFI_attribute_allocatable &&
             source_desc->dv.attribute != CFI_attribute_pointer) {
             PyErr_SetString(PyExc_ValueError, "Source descriptor attribute must be CFI_attribute_other, CFI_attribute_allocatable, or CFI_attribute_pointer");
-            return NULL;
+            goto error_restore;
         }
 
         if (self->dv.rank != source_rank) {
             PyErr_SetString(PyExc_ValueError, "Result descriptor rank must match source descriptor rank");
-            return NULL;
+            goto error_restore;
         }
 
         if (self->dv.elem_len == 0) {
             self->dv.elem_len = source_desc->dv.elem_len;
         } else if (self->dv.elem_len != source_desc->dv.elem_len) {
             PyErr_SetString(PyExc_ValueError, "Result descriptor elem_len must match source descriptor elem_len");
-            return NULL;
+            goto error_restore;
         }
 
         if (self->dv.type == 0) {
             self->dv.type = source_desc->dv.type;
         } else if (self->dv.type != source_desc->dv.type) {
             PyErr_SetString(PyExc_ValueError, "Result descriptor type must match source descriptor type");
-            return NULL;
+            goto error_restore;
         }
 
         if (self->dv.version == 0) {
             self->dv.version = source_desc->dv.version;
         } else if (self->dv.version != source_desc->dv.version) {
             PyErr_SetString(PyExc_ValueError, "Result descriptor version must match source descriptor version");
-            return NULL;
+            goto error_restore;
         }
     }
-
-    /* Save fields mutated before the call so they can be restored on failure */
-    size_t saved_sp_elem_len = self->dv.elem_len;
-    CFI_type_t saved_sp_type = self->dv.type;
-    int saved_sp_version = self->dv.version;
-    CFI_attribute_t saved_sp_attribute = self->dv.attribute;
 
     if (self->dv.attribute != CFI_attribute_pointer) {
         self->dv.attribute = CFI_attribute_pointer;
@@ -868,29 +928,28 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
         lower_bounds_seq != NULL && lower_bounds_seq != Py_None) {
         Py_ssize_t lower_len = PySequence_Length(lower_bounds_seq);
         if (lower_len == -1) {
-            return NULL;
+            goto error_restore;
         }
         if (lower_len < (Py_ssize_t)source_rank) {
             PyErr_SetString(PyExc_ValueError, "lower_bounds sequence must have at least rank elements");
-            return NULL;
+            goto error_restore;
         }
 
         lower_bounds = (CFI_index_t *)malloc(source_rank * sizeof(CFI_index_t));
         if (lower_bounds == NULL) {
-            return PyErr_NoMemory();
+            PyErr_NoMemory();
+            goto error_restore;
         }
 
         for (CFI_rank_t i = 0; i < source_rank; i++) {
             PyObject *lb_item = PySequence_GetItem(lower_bounds_seq, i);
             if (lb_item == NULL) {
-                free(lower_bounds);
-                return NULL;
+                goto error_restore;
             }
             lower_bounds[i] = PyLong_AsLong(lb_item);
             Py_DECREF(lb_item);
             if (PyErr_Occurred()) {
-                free(lower_bounds);
-                return NULL;
+                goto error_restore;
             }
         }
     }
@@ -914,6 +973,14 @@ static PyObject* PyCFI_cdesc_setpointer(PyCFI_cdesc_object *self, PyObject *args
     }
 
     return PyLong_FromLong((long)status);
+
+error_restore:
+    free(lower_bounds);
+    self->dv.elem_len = saved_sp_elem_len;
+    self->dv.type = saved_sp_type;
+    self->dv.version = saved_sp_version;
+    self->dv.attribute = saved_sp_attribute;
+    return NULL;
 }
 
 static PyMethodDef PyCFI_cdesc_methods[] = {
@@ -1353,8 +1420,10 @@ static int add_pytypes(PyObject *m){
 
     add_result = PyModule_AddObjectRef(m, "CFI_dim_t", PyCFI_dim_type);
     if (add_result == -1 ) {
+        Py_DECREF(PyCFI_dim_type);
         return add_result;
     }
+    Py_DECREF(PyCFI_dim_type);
 
 
     PyObject *PyCFI_cdesc_type = PyType_FromSpec(&PyCFI_cdesc_spec);
@@ -1364,8 +1433,10 @@ static int add_pytypes(PyObject *m){
 
     add_result = PyModule_AddObjectRef(m, "CFI_cdesc_t", PyCFI_cdesc_type);
     if (add_result == -1 ) {
+        Py_DECREF(PyCFI_cdesc_type);
         return add_result;
     }
+    Py_DECREF(PyCFI_cdesc_type);
 
     return 0;
 }
@@ -1428,10 +1499,10 @@ PyInit_ifb(void) {
 #else
     PyObject *module;
     module = PyModule_Create(&IFBModule);
-    if (module == NULL) Py_RETURN_NONE;
+    if (module == NULL) return NULL;
     if (IFBModule_exec(module) != 0) {
         Py_XDECREF(module);
-        Py_RETURN_NONE;
+        return NULL;
     }
     return module;
 #endif
