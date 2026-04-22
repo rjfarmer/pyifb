@@ -157,7 +157,3 @@ typedef struct {
     bool owns_memory;
     CFI_cdesc_t dv;
 } PyCFI_cdesc_object;
-
-
-
-static PyObject* new_PyCFI_dim();

@@ -35,6 +35,23 @@ class TestCdescT:
         for i in range(0, p.ifb.CFI_MAX_RANK):
             assert z.dim[i].extent == 0
 
+    def test_dim_isinstance(self):
+        """dim elements must be instances of the exported CFI_dim_t type."""
+        z = p.ifb.CFI_cdesc_t(2)
+        z.establish(0, p.ifb.CFI_attribute_other, p.ifb.CFI_type_int, 4, 2, [3, 4])
+        dims = z.dim
+        assert isinstance(dims[0], p.ifb.CFI_dim_t)
+        assert isinstance(dims[1], p.ifb.CFI_dim_t)
+
+    def test_dim_type_identity(self):
+        """All dim elements share exactly the same type object."""
+        z = p.ifb.CFI_cdesc_t(3)
+        z.establish(0, p.ifb.CFI_attribute_other, p.ifb.CFI_type_int, 4, 3, [2, 3, 4])
+        dims = z.dim
+        assert type(dims[0]) is p.ifb.CFI_dim_t
+        assert type(dims[0]) is type(dims[1])
+        assert type(dims[1]) is type(dims[2])
+
     def test_bytes(self):
         z = p.ifb.CFI_cdesc_t(5)
 

@@ -2,6 +2,10 @@
 
 #include "ifb.h"
 
+typedef struct {
+    PyObject *CFI_dim_type;
+} IFBModuleState;
+
 // https://github.com/gcc-mirror/gcc/blob/master/libgfortran/ISO_Fortran_binding.h
 // https://wg5-fortran.org/N1901-N1950/N1942.pdf
 
@@ -32,28 +36,11 @@ static PyType_Spec PyCFI_dim_spec = {
     .slots = PyCFI_dim_slots,
 };
 
-static PyObject* new_PyCFI_dim(){
+static PyObject* PyCFI_dim_object_from_CFI_dim_t(PyObject *dim_type, CFI_dim_t in){
 
-    PyCFI_dim_object *out;
+    PyCFI_dim_object *out = (PyCFI_dim_object*) PyObject_CallNoArgs(dim_type);
 
-    PyObject *CFI_dim_type = PyType_FromSpec(&PyCFI_dim_spec);
-    if (CFI_dim_type == NULL) {
-        return NULL;
-    }
-
-    out = (PyCFI_dim_object*) PyObject_CallObject(CFI_dim_type, NULL);
-    Py_XDECREF(CFI_dim_type);
-
-    return (PyObject*) out;
-
-}
-
-
-static PyObject* PyCFI_dim_object_from_CFI_dim_t(CFI_dim_t in){
-
-    PyCFI_dim_object *out = (PyCFI_dim_object*) new_PyCFI_dim();
-
-    if(out){out->dim = in;}
+    if(out){ out->dim = in; }
 
     return (PyObject*) out; 
 }
@@ -108,6 +95,16 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
         Py_RETURN_NONE;
     }
 
+    PyObject *module = PyType_GetModule(Py_TYPE(self));
+    if (module == NULL) {
+        return NULL;
+    }
+    IFBModuleState *state = (IFBModuleState *)PyModule_GetState(module);
+    if (state == NULL || state->CFI_dim_type == NULL) {
+        PyErr_SetString(PyExc_RuntimeError, "CFI_dim_t type not available");
+        return NULL;
+    }
+
     PyObject *dims = PyTuple_New((Py_ssize_t) rank);
     if(dims == NULL) {
         return NULL;
@@ -116,7 +113,7 @@ static PyObject* PyCFI_cdesc_dim_get(PyCFI_cdesc_object* self, void* Py_UNUSED){
     PyObject *dim_obj;
     int set_result;
     for(int i = 0; i < rank; i++){
-        dim_obj = PyCFI_dim_object_from_CFI_dim_t(self->dv.dim[i]);
+        dim_obj = PyCFI_dim_object_from_CFI_dim_t(state->CFI_dim_type, self->dv.dim[i]);
         if (dim_obj == NULL) {
             Py_XDECREF(dims);
             return NULL;
@@ -1409,9 +1406,26 @@ static int add_compiler_types(PyObject *m){
 }
 
 
+static int IFBModule_traverse(PyObject *module, visitproc visit, void *arg) {
+    IFBModuleState *state = (IFBModuleState *)PyModule_GetState(module);
+    Py_VISIT(state->CFI_dim_type);
+    return 0;
+}
+
+static int IFBModule_clear(PyObject *module) {
+    IFBModuleState *state = (IFBModuleState *)PyModule_GetState(module);
+    Py_CLEAR(state->CFI_dim_type);
+    return 0;
+}
+
 static int add_pytypes(PyObject *m){
 
     int add_result;
+
+    IFBModuleState *state = (IFBModuleState *)PyModule_GetState(m);
+    if (state == NULL) {
+        return -1;
+    }
 
     PyObject *PyCFI_dim_type = PyType_FromSpec(&PyCFI_dim_spec);
     if (PyCFI_dim_type == NULL) {
@@ -1423,10 +1437,11 @@ static int add_pytypes(PyObject *m){
         Py_DECREF(PyCFI_dim_type);
         return add_result;
     }
-    Py_DECREF(PyCFI_dim_type);
+    /* Transfer local reference to module state so dim_get can use it. */
+    state->CFI_dim_type = PyCFI_dim_type;  /* owns the ref from PyType_FromSpec */
 
 
-    PyObject *PyCFI_cdesc_type = PyType_FromSpec(&PyCFI_cdesc_spec);
+    PyObject *PyCFI_cdesc_type = PyType_FromModuleAndSpec(m, &PyCFI_cdesc_spec, NULL);
     if (PyCFI_cdesc_type == NULL) {
         return -1;
     }
@@ -1484,8 +1499,10 @@ PyModuleDef IFBModule = {
     .m_base = PyModuleDef_HEAD_INIT,
     .m_name = "ifb",
     .m_doc = PyDoc_STR("Bindings for ISO_Fortran_binding.h"),
-    .m_size = 0,
+    .m_size = sizeof(IFBModuleState),
     .m_methods = IFBModule_methods,
+    .m_traverse = IFBModule_traverse,
+    .m_clear = IFBModule_clear,
 #ifdef Py_mod_exec
     .m_slots = IFBModule_slots,
 #endif
