@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0+
 from __future__ import annotations
 
-from . import ifb  # type: ignore[attr-defined]
+from . import ifb
 import numpy as np
 import ctypes
 import sys

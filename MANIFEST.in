@@ -3,3 +3,4 @@ include COPYING.txt
 include setup.py
 include pyproject.toml
 recursive-include pyifb *.c *.h
+recursive-include pyifb *.pyi py.typed

@@ -33,6 +33,9 @@ dynamic = ["version"]
 [tool.setuptools]
 packages = ["pyifb"]
 
+[tool.setuptools.package-data]
+pyifb = ["py.typed", "*.pyi"]
+
 [tool.setuptools_scm]
 
 
