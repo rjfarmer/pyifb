@@ -2,11 +2,11 @@
 from __future__ import annotations
 
 from . import ifb
-import numpy as np
-import ctypes
-import sys
-from collections import namedtuple
-from typing import Any, Type
+import numpy as _np
+import ctypes as _ctypes
+import sys as _sys
+from collections import namedtuple as _namedtuple
+from typing import Any as _Any, Type as _Type
 
 _CDESC_OFFSETS: dict[str, int] = ifb._offsetof_cdesc()
 _CDESC_FIELD_SIZES: dict[str, int] = {
@@ -16,22 +16,22 @@ _CDESC_FIELD_SIZES: dict[str, int] = {
 }
 
 _DTYPE_TO_CFI_TYPE = {
-    np.dtype(np.bool_): getattr(ifb, "CFI_type_Bool", None),
-    np.dtype(np.int8): getattr(ifb, "CFI_type_int8_t", None),
-    np.dtype(np.int16): getattr(ifb, "CFI_type_int16_t", None),
-    np.dtype(np.int32): getattr(ifb, "CFI_type_int32_t", None),
-    np.dtype(np.int64): getattr(ifb, "CFI_type_int64_t", None),
-    np.dtype(np.float32): getattr(ifb, "CFI_type_float", None),
-    np.dtype(np.float64): getattr(ifb, "CFI_type_double", None),
-    np.dtype(np.complex64): getattr(ifb, "CFI_type_float_Complex", None),
-    np.dtype(np.complex128): getattr(ifb, "CFI_type_double_Complex", None),
+    _np.dtype(_np.bool_): getattr(ifb, "CFI_type_Bool", None),
+    _np.dtype(_np.int8): getattr(ifb, "CFI_type_int8_t", None),
+    _np.dtype(_np.int16): getattr(ifb, "CFI_type_int16_t", None),
+    _np.dtype(_np.int32): getattr(ifb, "CFI_type_int32_t", None),
+    _np.dtype(_np.int64): getattr(ifb, "CFI_type_int64_t", None),
+    _np.dtype(_np.float32): getattr(ifb, "CFI_type_float", None),
+    _np.dtype(_np.float64): getattr(ifb, "CFI_type_double", None),
+    _np.dtype(_np.complex64): getattr(ifb, "CFI_type_float_Complex", None),
+    _np.dtype(_np.complex128): getattr(ifb, "CFI_type_double_Complex", None),
 }
 
 
 def _read_signed_field(raw: bytes, field: str) -> int:
     offset = _CDESC_OFFSETS[field]
     size = _CDESC_FIELD_SIZES[field]
-    return int.from_bytes(raw[offset : offset + size], sys.byteorder, signed=True)
+    return int.from_bytes(raw[offset : offset + size], _sys.byteorder, signed=True)
 
 
 __all__ = ["CFI_cdesc", "ifb"]
@@ -85,9 +85,9 @@ class CFI_cdesc:
         >>> array = cdesc.value  # Access as numpy array
     """
 
-    _cfi: Any
+    _cfi: _Any
 
-    def __init__(self, rank: int | None = None, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, rank: int | None = None) -> None:
         """Initialize an empty CFI_cdesc wrapper.
 
         The internal C descriptor is not allocated until _new() or from_bytes() is called.
@@ -104,7 +104,7 @@ class CFI_cdesc:
         """
         self._cfi = ifb.CFI_cdesc_t(rank)
 
-    def from_bytes(self, b: Any) -> CFI_cdesc:
+    def from_bytes(self, b: _Any) -> CFI_cdesc:
         """Deserialize a C descriptor from bytes.
 
         Accepts bytes from various sources (ctypes arrays, bytearrays, raw bytes)
@@ -150,7 +150,7 @@ class CFI_cdesc:
         return None
 
     @classmethod
-    def in_dll(cls, lib: ctypes.CDLL, name: str) -> CFI_cdesc:
+    def in_dll(cls, lib: _ctypes.CDLL, name: str) -> CFI_cdesc:
         """Load a C descriptor from a shared library (DLL/SO).
 
         Reads a descriptor from a named global variable in a loaded library.
@@ -166,14 +166,14 @@ class CFI_cdesc:
         """
         # Read just the base header to extract rank without going through
         # from_bytes (which requires the full header + all dim entries).
-        header_type = ctypes.c_ubyte * ifb._sizeof_cdesc
+        header_type = _ctypes.c_ubyte * ifb._sizeof_cdesc
         raw_header = header_type.in_dll(lib, name)
         header_bytes = bytes([raw_header[i] for i in range(ifb._sizeof_cdesc)])
         rank = _read_signed_field(header_bytes, "rank")
 
         # Now read the full descriptor including dim entries.
         full_size = ifb._sizeof_cdesc + ifb._sizeof_dims * rank
-        full_type = ctypes.c_ubyte * full_size
+        full_type = _ctypes.c_ubyte * full_size
         raw_full = full_type.in_dll(lib, name)
         full_bytes = bytes([raw_full[i] for i in range(full_size)])
 
@@ -182,7 +182,7 @@ class CFI_cdesc:
         return temp
 
     @property
-    def value(self) -> np.ndarray | None:
+    def value(self) -> _np.ndarray | None:
         """Reconstruct the array data as a numpy array.
 
         Casts the base_addr pointer to the appropriate ctypes type and creates
@@ -208,10 +208,10 @@ class CFI_cdesc:
             type_name = cfi_type.name if cfi_type is not None else "unknown"
             raise TypeError(f"Can't map to ctype {type_name}")
 
-        PTR = ctypes.POINTER(self.ctype)
-        x_ptr = ctypes.cast(self._cfi.base_addr, PTR)
+        PTR = _ctypes.POINTER(self.ctype)
+        x_ptr = _ctypes.cast(self._cfi.base_addr, PTR)
 
-        array = np.ctypeslib.as_array(x_ptr, shape=shape)
+        array = _np.ctypeslib.as_array(x_ptr, shape=shape)
 
         dtype = self.dtype
         if dtype is not None:
@@ -220,12 +220,12 @@ class CFI_cdesc:
         return array
 
     @value.setter
-    def value(self, value: Any) -> None:
+    def value(self, value: _Any) -> None:
         if self._cfi is None:
             return
 
-        if not isinstance(value, np.ndarray):
-            value = np.asarray(value)
+        if not isinstance(value, _np.ndarray):
+            value = _np.asarray(value)
 
         if self._cfi.base_addr is None:
             lower = [0] * value.ndim
@@ -249,8 +249,8 @@ class CFI_cdesc:
         except (TypeError, KeyError):
             dtype = None
 
-        src = np.asfortranarray(value.astype(dtype) if dtype is not None else value)
-        ctypes.memmove(self._cfi.base_addr, src.ctypes.data, src.nbytes)
+        src = _np.asfortranarray(value.astype(dtype) if dtype is not None else value)
+        _ctypes.memmove(self._cfi.base_addr, src.ctypes.data, src.nbytes)
 
     @property
     def rank(self) -> int | None:
@@ -267,7 +267,7 @@ class CFI_cdesc:
         return None
 
     @property
-    def dim(self) -> tuple[Any, ...] | None:
+    def dim(self) -> tuple[_Any, ...] | None:
         """tuple or None: Dimension objects containing lower_bound, extent, and stride info."""
         if self._cfi is not None:
             return self._cfi.dim
@@ -311,10 +311,10 @@ class CFI_cdesc:
             return None
         if shape == 0:
             return 0
-        return int(np.prod(shape))
+        return int(_np.prod(shape))
 
     @property
-    def pytype(self) -> Type[Any] | None:
+    def pytype(self) -> _Type[_Any] | None:
         """type: Python type corresponding to the element type (int, float, bool, etc)."""
         cfi_type = self.type
         if cfi_type is not None:
@@ -322,7 +322,7 @@ class CFI_cdesc:
         return None
 
     @property
-    def dtype(self) -> np.dtype[Any] | str | None:
+    def dtype(self) -> _np.dtype[_Any] | str | None:
         """numpy.dtype or str or None: NumPy dtype for the element type."""
         cfi_type = self.type
         if cfi_type is not None:
@@ -330,7 +330,7 @@ class CFI_cdesc:
         return None
 
     @property
-    def ctype(self) -> Type[Any] | None:
+    def ctype(self) -> _Type[_Any] | None:
         """ctypes type: ctypes representation of the element type for C interop."""
         cfi_type = self.type
         if cfi_type is not None:
@@ -338,45 +338,53 @@ class CFI_cdesc:
         return None
 
 
-_cfi_tuple = namedtuple(
+_cfi_tuple = _namedtuple(
     "_cfi_tuple", ("name", "ctype", "pytype", "dtype"), defaults=(None, None, None)
 )
 
 _map_cfi_type: dict[int, _cfi_tuple] = {
-    ifb.CFI_type_Bool: _cfi_tuple("CFI_type_Bool", ctypes.c_bool, bool, bool),
-    ifb.CFI_type_cfunptr: _cfi_tuple("CFI_type_cfunptr", ctypes.c_ubyte * 8),
-    ifb.CFI_type_char: _cfi_tuple("CFI_type_char", ctypes.c_char, str, "B"),
-    ifb.CFI_type_cptr: _cfi_tuple("CFI_type_cptr", ctypes.c_void_p, None, "V"),
+    ifb.CFI_type_Bool: _cfi_tuple("CFI_type_Bool", _ctypes.c_bool, bool, bool),
+    ifb.CFI_type_cfunptr: _cfi_tuple("CFI_type_cfunptr", _ctypes.c_ubyte * 8),
+    ifb.CFI_type_char: _cfi_tuple("CFI_type_char", _ctypes.c_char, str, "B"),
+    ifb.CFI_type_cptr: _cfi_tuple("CFI_type_cptr", _ctypes.c_void_p, None, "V"),
     ifb.CFI_type_double: _cfi_tuple(
-        "CFI_type_double", ctypes.c_double, float, np.float64
+        "CFI_type_double", _ctypes.c_double, float, _np.float64
     ),
     ifb.CFI_type_double_Complex: _cfi_tuple(
-        "CFI_type_double_Complex", ctypes.c_double * 2, complex, np.complex128
+        "CFI_type_double_Complex", _ctypes.c_double * 2, complex, _np.complex128
     ),
-    ifb.CFI_type_float: _cfi_tuple("CFI_type_float", ctypes.c_float, float, np.float32),
-    ifb.CFI_type_float128: _cfi_tuple("CFI_type_float128", ctypes.c_ubyte * 16),
+    ifb.CFI_type_float: _cfi_tuple(
+        "CFI_type_float", _ctypes.c_float, float, _np.float32
+    ),
+    ifb.CFI_type_float128: _cfi_tuple("CFI_type_float128", _ctypes.c_ubyte * 16),
     ifb.CFI_type_float128_Complex: _cfi_tuple(
-        "CFI_type_float128_Complex", ctypes.c_ubyte * 16 * 2
+        "CFI_type_float128_Complex", _ctypes.c_ubyte * 16 * 2
     ),
     ifb.CFI_type_float_Complex: _cfi_tuple(
-        "CFI_type_float_Complex", ctypes.c_float * 2, complex, np.complex64
+        "CFI_type_float_Complex", _ctypes.c_float * 2, complex, _np.complex64
     ),
-    ifb.CFI_type_int: _cfi_tuple("CFI_type_int", ctypes.c_int, int, np.int32),
-    ifb.CFI_type_int16_t: _cfi_tuple("CFI_type_int16_t", ctypes.c_int16, int, np.int16),
-    ifb.CFI_type_int32_t: _cfi_tuple("CFI_type_int32_t", ctypes.c_int32, int, np.int32),
-    ifb.CFI_type_int64_t: _cfi_tuple("CFI_type_int64_t", ctypes.c_int64, int, np.int64),
-    ifb.CFI_type_int8_t: _cfi_tuple("CFI_type_int8_t", ctypes.c_int8, int, np.int8),
-    ifb.CFI_type_long: _cfi_tuple("CFI_type_long", ctypes.c_long, int, np.long),
+    ifb.CFI_type_int: _cfi_tuple("CFI_type_int", _ctypes.c_int, int, _np.int32),
+    ifb.CFI_type_int16_t: _cfi_tuple(
+        "CFI_type_int16_t", _ctypes.c_int16, int, _np.int16
+    ),
+    ifb.CFI_type_int32_t: _cfi_tuple(
+        "CFI_type_int32_t", _ctypes.c_int32, int, _np.int32
+    ),
+    ifb.CFI_type_int64_t: _cfi_tuple(
+        "CFI_type_int64_t", _ctypes.c_int64, int, _np.int64
+    ),
+    ifb.CFI_type_int8_t: _cfi_tuple("CFI_type_int8_t", _ctypes.c_int8, int, _np.int8),
+    ifb.CFI_type_long: _cfi_tuple("CFI_type_long", _ctypes.c_long, int, _np.long),
     ifb.CFI_type_long_double: _cfi_tuple(
-        "CFI_type_long_double", ctypes.c_longdouble, int, np.longdouble
+        "CFI_type_long_double", _ctypes.c_longdouble, int, _np.longdouble
     ),
     ifb.CFI_type_long_double_Complex: _cfi_tuple(
-        "CFI_type_long_double_Complex", ctypes.c_longdouble * 2
+        "CFI_type_long_double_Complex", _ctypes.c_longdouble * 2
     ),
-    ifb.CFI_type_long_long: _cfi_tuple("CFI_type_long_long", ctypes.c_longlong, int),
-    ifb.CFI_type_short: _cfi_tuple("CFI_type_short", ctypes.c_short, int, np.short),
+    ifb.CFI_type_long_long: _cfi_tuple("CFI_type_long_long", _ctypes.c_longlong, int),
+    ifb.CFI_type_short: _cfi_tuple("CFI_type_short", _ctypes.c_short, int, _np.short),
     ifb.CFI_type_signed_char: _cfi_tuple(
-        "CFI_type_signed_char", ctypes.c_byte, bytes, np.ubyte
+        "CFI_type_signed_char", _ctypes.c_byte, bytes, _np.ubyte
     ),
     ifb.CFI_type_struct: _cfi_tuple("CFI_type_struct"),
 }

@@ -49,6 +49,14 @@ This repository contains a CPython C extension (`pyifb/ifb.c`) that wraps Fortra
 - `IFBModule_traverse` and `IFBModule_clear` must visit/clear every `PyObject*` stored in `IFBModuleState`; update both when adding new state fields.
 - Never call `PyType_FromSpec` at call time to manufacture a throw-away type; always reuse the type stored in module state.
 
+## Python Import And Typing Hygiene
+
+- Keep imports clean: avoid unused imports, avoid wildcard imports, and keep implementation-only imports private (prefer underscore-prefixed aliases in `__init__.py`).
+- Keep module exports explicit using `__all__` and do not leak unrelated helper symbols into the public package namespace.
+- Add and preserve type annotations for public Python APIs and changed code paths; prefer precise types over `Any` when practical.
+- Keep `.pyi` stubs in sync with runtime modules when public APIs change.
+- Validate Python typing changes with `mypy` before finishing.
+
 ## Required Validation
 
 - Run focused tests after C extension changes:
