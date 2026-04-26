@@ -65,6 +65,13 @@ jobs:
         with:
           persist-credentials: false
 
+      - uses: fortran-lang/setup-fortran@2a1b9c55897d827a9dfeb114408f3615e53b2b72 # v1.9.0
+        if: ${{ inputs.fortran-compiler != '' }}
+        id: setup-fortran
+        with:
+          compiler: ${{ inputs.fortran-compiler }}
+          version: ${{ inputs.fortran-version }}
+
       - name: Set up Python ${{ inputs.setup-python-version }}
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -92,13 +99,6 @@ jobs:
           sudo apt-get install -y ${SYSTEM_PACKAGES}
         env:
           SYSTEM_PACKAGES: ${{ inputs.system-packages }}
-
-      - uses: fortran-lang/setup-fortran@2a1b9c55897d827a9dfeb114408f3615e53b2b72 # v1.9.0
-        if: ${{ inputs.fortran-compiler != '' }}
-        id: setup-fortran
-        with:
-          compiler: ${{ inputs.fortran-compiler }}
-          version: ${{ inputs.fortran-version }}
 
       - name: Resolve compiler environment
         shell: bash
