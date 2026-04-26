@@ -70,10 +70,12 @@ jobs:
 
       - name: Install dependencies
         run: |
-          ${PYTHON_COMMAND} -m pip install --upgrade pip==25.2
-          ${PYTHON_COMMAND} -m pip install ${BOOTSTRAP_PACKAGES}
+          "${PYTHON_COMMAND}" -m pip install --upgrade pip==25.2
+          # shellcheck disable=SC2086
+          "${PYTHON_COMMAND}" -m pip install ${BOOTSTRAP_PACKAGES}
+          # shellcheck disable=SC2086
           pip-compile -o requirements.txt ${REQUIREMENTS_ARGS}
-          ${PYTHON_COMMAND} -m pip install -r requirements.txt
+          "${PYTHON_COMMAND}" -m pip install -r requirements.txt
         env:
           PYTHON_COMMAND: ${{ inputs.python-command }}
           BOOTSTRAP_PACKAGES: ${{ inputs.bootstrap-packages }}
@@ -83,7 +85,7 @@ jobs:
         if: ${{ inputs.system-packages != '' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y ${SYSTEM_PACKAGES}
+          sudo apt-get install -y "${SYSTEM_PACKAGES}"
         env:
           SYSTEM_PACKAGES: ${{ inputs.system-packages }}
 
@@ -97,18 +99,18 @@ jobs:
       - name: Resolve compiler environment
         shell: bash
         run: |
-          if [[ '${{ inputs.use-fortran-outputs }}' == 'true' ]]; then
-            if [[ -n '${STEPS_SETUP_FORTRAN_OUTPUTS_CC}' ]]; then
+          if [[ "${{ inputs.use-fortran-outputs }}" == 'true' ]]; then
+            if [[ -n "${STEPS_SETUP_FORTRAN_OUTPUTS_CC}" ]]; then
               echo "CC=${STEPS_SETUP_FORTRAN_OUTPUTS_CC}" >> "$GITHUB_ENV"
             fi
-            if [[ -n '${STEPS_SETUP_FORTRAN_OUTPUTS_FC}' ]]; then
+            if [[ -n "${STEPS_SETUP_FORTRAN_OUTPUTS_FC}" ]]; then
               echo "FC=${STEPS_SETUP_FORTRAN_OUTPUTS_FC}" >> "$GITHUB_ENV"
             fi
           else
-            if [[ -n '${INPUTS_CC}' ]]; then
+            if [[ -n "${INPUTS_CC}" ]]; then
               echo "CC=${INPUTS_CC}" >> "$GITHUB_ENV"
             fi
-            if [[ -n '${INPUTS_FC}' ]]; then
+            if [[ -n "${INPUTS_FC}" ]]; then
               echo "FC=${INPUTS_FC}" >> "$GITHUB_ENV"
             fi
           fi

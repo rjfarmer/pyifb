@@ -59,7 +59,8 @@ This repository contains a CPython C extension (`pyifb/ifb.c`) that wraps Fortra
 
 ## GitHub Actions Workflow Hygiene
 
-- When editing files under `.github/workflows/`, run `zizmor --gh-token $(gh auth token) --fix=all  .github/` before finishing.
+- When editing files under `.github/workflows/`, run `actionlint` to check for syntax and logic errors.
+- Run `zizmor --gh-token $(gh auth token) --fix=all .github/` to identify and fix security issues before finishing.
 
 ## Required Validation
 
