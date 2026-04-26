@@ -57,6 +57,10 @@ This repository contains a CPython C extension (`pyifb/ifb.c`) that wraps Fortra
 - Keep `.pyi` stubs in sync with runtime modules when public APIs change.
 - Validate Python typing changes with `mypy` before finishing.
 
+## GitHub Actions Workflow Hygiene
+
+- When editing files under `.github/workflows/`, run `zizmor --gh-token $(gh auth token) --fix=all  .github/` before finishing.
+
 ## Required Validation
 
 - Run focused tests after C extension changes:
