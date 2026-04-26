@@ -88,7 +88,8 @@ jobs:
         if: ${{ inputs.system-packages != '' }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y "${SYSTEM_PACKAGES}"
+          # shellcheck disable=SC2086
+          sudo apt-get install -y ${SYSTEM_PACKAGES}
         env:
           SYSTEM_PACKAGES: ${{ inputs.system-packages }}
 

@@ -17,11 +17,11 @@ jobs:
     with:
       runs-on: ${{ matrix.os }}
       setup-python-version: ${{ matrix.python-version }}
+      python-command: python3
       fortran-compiler: ${{ matrix.toolchain.compiler }}
       fortran-version: ${{ matrix.toolchain.version }}
       cc: icx
       fc: ifx
-      build-command: python -m build
-      install-command: python -m pip install dist/pyifb*.whl
+      build-command: python3 -m build
+      install-command: python3 -m pip install dist/pyifb*.whl
       test-command: pytest -v
-
