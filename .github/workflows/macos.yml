@@ -19,9 +19,8 @@ jobs:
       fortran-compiler: ${{ matrix.toolchain.compiler }}
       fortran-version: ${{ matrix.toolchain.version }}
       use-fortran-outputs: true
-      build-command: |
-        python -m build
-        python -m pip install dist/pyifb*.whl
+      build-command: python -m build
+      install-command: python -m pip install dist/pyifb*.whl
       test-command: pytest -v
 
 

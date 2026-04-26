@@ -48,6 +48,9 @@ on:
       build-command:
         required: true
         type: string
+      install-command:
+        required: true
+        type: string
       test-command:
         required: true
         type: string
@@ -124,6 +127,11 @@ jobs:
         run: "${BUILD_COMMAND}"
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
+
+      - name: Install
+        run: "${INSTALL_COMMAND}"
+        env:
+          INSTALL_COMMAND: ${{ inputs.install-command }}
 
       - name: Test
         run: "${TEST_COMMAND}"

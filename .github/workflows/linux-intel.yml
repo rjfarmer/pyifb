@@ -21,8 +21,7 @@ jobs:
       fortran-version: ${{ matrix.toolchain.version }}
       cc: icx
       fc: ifx
-      build-command: |
-        python -m build
-        python -m pip install dist/pyifb*.whl
+      build-command: python -m build
+      install-command: python -m pip install dist/pyifb*.whl
       test-command: pytest -v
 

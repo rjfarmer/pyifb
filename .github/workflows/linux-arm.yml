@@ -16,8 +16,7 @@ jobs:
       system-packages: gcc gfortran libopenblas-dev
       cc: gcc
       fc: gfortran
-      build-command: |
-        python -m build
-        python -m pip install dist/pyifb*.whl
+      build-command: python -m build
+      install-command: python -m pip install dist/pyifb*.whl
       test-command: pytest -v
 

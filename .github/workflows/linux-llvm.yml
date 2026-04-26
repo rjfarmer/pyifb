@@ -15,8 +15,7 @@ jobs:
       system-packages: build-essential cmake ninja-build flang clang libflang-dev libclang-common
       cc: clang
       fc: flang
-      build-command: |
-        python -m build
-        python -m pip install dist/pyifb*.whl
+      build-command: python -m build
+      install-command: python -m pip install dist/pyifb*.whl
       test-command: pytest -v
 

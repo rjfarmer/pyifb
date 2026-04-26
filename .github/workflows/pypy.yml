@@ -18,7 +18,6 @@ jobs:
       fortran-compiler: ${{ matrix.toolchain.compiler }}
       fortran-version: ${{ matrix.toolchain.version }}
       cc: gcc
-      build-command: |
-        pypy3 -m build
-        pypy3 -m pip install dist/pyifb*.whl
+      build-command: pypy3 -m build
+      install-command: pypy3 -m pip install dist/pyifb*.whl
       test-command: pytest -v
