@@ -121,11 +121,11 @@ jobs:
           INPUTS_FC: ${{ inputs.fc }}
 
       - name: Build
-        run: ${BUILD_COMMAND}
+        run: "${BUILD_COMMAND}"
         env:
           BUILD_COMMAND: ${{ inputs.build-command }}
 
       - name: Test
-        run: ${TEST_COMMAND}
+        run: "${TEST_COMMAND}"
         env:
           TEST_COMMAND: ${{ inputs.test-command }}
