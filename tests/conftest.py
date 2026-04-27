@@ -1,11 +1,12 @@
 # SPDX-License-Identifier: GPL-2.0+
 
-import subprocess
-import pytest
 import os
 import shlex
 import shutil
+import subprocess
 from pathlib import Path
+
+import pytest
 
 
 def _cmake_generator_args():

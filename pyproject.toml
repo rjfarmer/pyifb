@@ -63,3 +63,6 @@ repair-wheel-command = [
   "auditwheel repair -w {dest_dir} {wheel}",
   "pipx run abi3audit --strict --report {wheel}",
 ]
+
+[tool.isort]
+profile = "black"

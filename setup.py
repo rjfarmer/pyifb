@@ -1,10 +1,11 @@
-from setuptools import setup, Extension
 import os
-from pathlib import Path
 import shutil
 import subprocess  # nosec B404
-from typing import Any
 from itertools import product
+from pathlib import Path
+from typing import Any
+
+from setuptools import Extension, setup
 
 lib: list[Any] = []
 lib_dirs: list[Any] = []

@@ -1,13 +1,14 @@
 # SPDX-License-Identifier: GPL-2.0+
 
-import pyifb as p
-import pyifb.utils as utils
-
-import pytest
 import ctypes
-import numpy as np
 import sys
 from pathlib import Path
+
+import numpy as np
+import pytest
+
+import pyifb as p
+import pyifb.utils as utils
 
 lib = ctypes.CDLL(Path("tests", f"bindc.{utils.library_ext()}"))
 

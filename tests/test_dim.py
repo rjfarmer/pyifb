@@ -1,8 +1,8 @@
 # SPDX-License-Identifier: GPL-2.0+
 
-import pyifb as p
-
 import pytest
+
+import pyifb as p
 
 
 class TestDimT:

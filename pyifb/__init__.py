@@ -1,12 +1,15 @@
 # SPDX-License-Identifier: GPL-2.0+
 from __future__ import annotations
 
-from . import ifb
-import numpy as _np
 import ctypes as _ctypes
 import sys as _sys
 from collections import namedtuple as _namedtuple
-from typing import Any as _Any, Type as _Type
+from typing import Any as _Any
+from typing import Type as _Type
+
+import numpy as _np
+
+from . import ifb
 
 _CDESC_OFFSETS: dict[str, int] = ifb._offsetof_cdesc()
 _CDESC_FIELD_SIZES: dict[str, int] = {
