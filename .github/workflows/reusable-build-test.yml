@@ -80,7 +80,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          "${PYTHON_COMMAND}" -m pip install --upgrade pip==25.2
           # shellcheck disable=SC2086
           "${PYTHON_COMMAND}" -m pip install ${BOOTSTRAP_PACKAGES}
           # shellcheck disable=SC2086
