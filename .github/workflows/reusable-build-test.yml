@@ -16,7 +16,7 @@ on:
       bootstrap-packages:
         required: false
         type: string
-        default: build wheel pip-tools
+        default: build wheel pip-tools typing_extensions
       requirements-args:
         required: false
         type: string
