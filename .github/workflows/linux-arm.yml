@@ -9,7 +9,7 @@ jobs:
       matrix:
         os: [ ubuntu-24.04-arm ]
         python-version: [ '3.10', '3.11', '3.12', '3.13', '3.14'] 
-    uses: ./.github/workflows/reusable-build-test.yml
+    uses: $/.github/workflows/reusable-build-test.yml
     with:
       runs-on: ${{ matrix.os }}
       setup-python-version: ${{ matrix.python-version }}
