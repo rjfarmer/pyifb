@@ -9,7 +9,7 @@ jobs:
       matrix:
         toolchain:
           - {compiler: gcc, version: 12}
-    uses: ./.github/workflows/reusable-build-test.yml
+    uses: $/.github/workflows/reusable-build-test.yml
     with:
       runs-on: ubuntu-latest
       setup-python-version: pypy3.10

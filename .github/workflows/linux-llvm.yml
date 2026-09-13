@@ -8,7 +8,7 @@ jobs:
       matrix:
         os: [ubuntu-latest]    
         python-version: ['3.13', '3.14']
-    uses: ./.github/workflows/reusable-build-test.yml
+    uses: $/.github/workflows/reusable-build-test.yml
     with:
       runs-on: ${{ matrix.os }}
       setup-python-version: ${{ matrix.python-version }}

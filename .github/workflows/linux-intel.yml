@@ -13,7 +13,7 @@ jobs:
           - {compiler: intel, version: '2025.0'}
           - {compiler: intel, version: '2024.0'}
           - {compiler: intel, version: '2023.0'}
-    uses: ./.github/workflows/reusable-build-test.yml
+    uses: $/.github/workflows/reusable-build-test.yml
     with:
       runs-on: ${{ matrix.os }}
       setup-python-version: ${{ matrix.python-version }}
